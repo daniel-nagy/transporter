@@ -1,0 +1,58 @@
+name: Jest
+description: Run Jest tests and collect coverage data
+inputs:
+  aws-access-key-id:
+    description: AWS access key ID
+    required: true
+  aws-secret-access-key:
+    description: AWS secret access key
+    required: true
+  generate-artifacts:
+    description: Generate coverage artifacts and upload them to S3
+    required: false
+    default: 'false'
+  s3-bucket-name:
+    description: The S3 bucket to upload artifacts to
+    required: true
+  s3-object-path:
+    description: Where the artifacts will be stored
+    required: true
+runs:
+  using: "composite"
+  steps:
+    - name: Run Jest tests
+      run: yarn test --collectCoverage
+      shell: bash
+    - name: Read Jest coverage output
+      id: read-jest-coverage
+      run: echo "::set-output json=$(cat coverage/coverage-summary.json 2>/dev/null)"
+      shell: bash
+    - name: Calculate percent coverage
+      id: calculate-percent-coverage
+      uses: ./.github/actions/jest-coverage-calculator
+      with:
+        coverage: ${{ steps.read-jest-coverage.outputs.json || '{}' }}
+    - name: Create coverage badge artifact
+      env:
+        percent: ${{ steps.calculate-percent-coverage.outputs.percent }}
+      if: inputs.generate-artifacts == 'true'
+      uses: ./.github/actions/create-artifact
+      with:
+        artifact: |
+          {
+            "schemaVersion": 1,
+            "label": "coverage",
+            "message": "${{ env.percent }}%",
+            "color": "${{
+              (env.percent < 25 && 'red') ||
+              (env.percent < 50 && 'orange') ||
+              (env.percent < 75 && 'yellow') ||
+              'brightgreen'
+            }}"
+          }
+        aws-access-key-id: ${{ inputs.aws-access-key-id }}
+        aws-secret-access-key: ${{ inputs.aws-secret-access-key }}
+        cache-control: no-cache
+        public: true
+        s3-bucket-name: ${{ inputs.s3-bucket-name }}
+        s3-object-key: ${{ inputs.s3-object-path }}/coverage-shield.json

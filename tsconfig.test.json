@@ -1,0 +1,11 @@
+{
+  "compilerOptions": {
+    "types": [
+      "jest"
+    ]
+  },
+  "extends": "./tsconfig.json",
+  "include": [
+    "index.test.ts"
+  ]
+}
