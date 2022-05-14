@@ -25,13 +25,15 @@ runs:
       shell: bash
     - name: Read Jest coverage output
       id: read-jest-coverage
-      run: echo "::set-output json=$(cat coverage/coverage-summary.json 2>/dev/null)"
+      run: |
+        json=$(cat coverage/coverage-summary.json)
+        echo "::set-output name=json::${json//$'\n'/'%0A'}"
       shell: bash
     - name: Calculate percent coverage
       id: calculate-percent-coverage
       uses: ./.github/actions/jest-coverage-calculator
       with:
-        coverage: ${{ steps.read-jest-coverage.outputs.json || '{}' }}
+        coverage: ${{ steps.read-jest-coverage.outputs.json }}
     - name: Create coverage badge artifact
       env:
         percent: ${{ steps.calculate-percent-coverage.outputs.percent }}
