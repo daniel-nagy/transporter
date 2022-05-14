@@ -10,7 +10,7 @@ inputs:
   generate-artifacts:
     description: Generate coverage artifacts and upload them to S3
     required: false
-    default: 'false'
+    default: "false"
   s3-bucket-name:
     description: The S3 bucket to upload artifacts to
     required: true

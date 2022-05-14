@@ -16,7 +16,7 @@ inputs:
   public:
     description: Make this artifact public
     required: false
-    default: 'false'
+    default: "false"
   s3-bucket-name:
     description: The name of the S3 bucket.
     required: true

@@ -34,7 +34,7 @@ const schedule = (interval, callback) => {
 
 const childFrame = document.body.appendChild(
   Object.assign(document.createElement("iframe"), {
-    src: "https://example.com"
+    src: "https://example.com",
   })
 );
 
@@ -45,7 +45,7 @@ expose({ value: { schedule }, to: childFrame.contentWindow });
 import { createProxy } from "@boulevard/transporter";
 
 const proxy = createProxy({ from: self.parent });
-const stop = await proxy.schedule(100, lapsedTime => console.log(lapsedTime));
+const stop = await proxy.schedule(100, (lapsedTime) => console.log(lapsedTime));
 
 setTimeout(stop, 1000);
 ```

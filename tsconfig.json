@@ -4,9 +4,7 @@
     "declaration": true,
     "esModuleInterop": true,
     "isolatedModules": true,
-    "lib": [
-      "es2018",
-    ],
+    "lib": ["es2018"],
     "moduleResolution": "node",
     "outDir": "build",
     "resolveJsonModule": true,
@@ -16,10 +14,6 @@
     "target": "es2018",
     "types": []
   },
-  "include": [
-    "src/**/*"
-  ],
-  "exclude": [
-    "src/**/*.test.ts"
-  ]
+  "include": ["src/**/*"],
+  "exclude": ["src/**/*.test.ts"]
 }
