@@ -29,7 +29,9 @@
     "test": "node --expose-gc $(yarn bin)/jest"
   },
   "devDependencies": {
+    "@actions/core": "^1.8.2",
     "@types/jest": "^27.4.1",
+    "@types/mime-types": "^2.1.1",
     "aws-sdk": "^2.1133.0",
     "jest": "^27.5.1",
     "mime-types": "^2.1.35",

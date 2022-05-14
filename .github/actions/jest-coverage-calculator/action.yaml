@@ -8,5 +8,5 @@ outputs:
   percent:
     description: The mean percent coverage
 runs:
-  using: "node12"
-  main: "main.js"
+  using: node16
+  main: main.mjs

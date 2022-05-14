@@ -1,4 +1,5 @@
-const core = require("@actions/core");
+import core from "@actions/core";
+
 const coverageJson = core.getInput("coverage", { required: true });
 const coverage = JSON.parse(coverageJson);
 
