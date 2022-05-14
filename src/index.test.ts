@@ -1,38 +1,82 @@
-import { createProxy, expose, Exposable, Remote, TimeoutError } from "./index";
+import {
+  createModule,
+  Exportable,
+  ExternalMessageTarget,
+  InternalMessageTarget,
+  MessageSubscriber,
+  Remote,
+  TimeoutError,
+  useModule,
+} from "./index";
 
 declare namespace globalThis {
   const gc: () => void;
 }
 
-type MessageSubscriber = (event: { data: string }) => void;
+type MessageTarget = ExternalMessageTarget & InternalMessageTarget;
 
-const createMessageTarget = () => ({
-  _callbacks: [] as MessageSubscriber[],
-  addEventListener(_type: "message", callback: MessageSubscriber) {
-    this._callbacks = [...this._callbacks, callback];
-  },
-  postMessage(message: string) {
-    this._callbacks.forEach(callback => callback({ data: message }));
-  },
-  removeEventListener(_type: "message", callback: MessageSubscriber) {
-    this._callbacks = this._callbacks.filter(cb => cb !== callback);
-  }
-});
+const createMessageTarget = (): MessageTarget => {
+  let callbacks: MessageSubscriber[] = [];
 
-const exposeValue = <T extends Exposable>(
-  value: T,
-  { scope = null }: { scope?: string | null } = {}
-): { proxy: Remote<T>; stop(): void } => {
+  return {
+    addEventListener(_type: "message", callback: MessageSubscriber) {
+      callbacks = [...callbacks, callback];
+    },
+    postMessage(message: string) {
+      callbacks.forEach((callback) =>
+        callback({ data: message, source: { postMessage() {} } })
+      );
+    },
+    removeEventListener(_type: "message", callback: MessageSubscriber) {
+      callbacks = callbacks.filter((cb) => cb !== callback);
+    },
+  };
+};
+
+const withSource = <T extends InternalMessageTarget>(
+  messageTarget: T,
+  source: ExternalMessageTarget
+): T => {
+  const { addEventListener, removeEventListener } = messageTarget;
+  const callbackMap = new WeakMap<MessageSubscriber, MessageSubscriber>();
+
+  return Object.assign(messageTarget, {
+    addEventListener(_type: "message", callback: MessageSubscriber) {
+      const wrappedCallback: MessageSubscriber = (event) =>
+        callback({ ...event, source });
+      callbackMap.set(callback, wrappedCallback);
+      addEventListener("message", wrappedCallback);
+    },
+    removeEventListener(_type: "message", callback: MessageSubscriber) {
+      const wrappedCallback = callbackMap.get(callback);
+      removeEventListener("message", wrappedCallback ?? callback);
+    },
+  });
+};
+
+const createMessageChannel = () => {
   const t1 = createMessageTarget();
   const t2 = createMessageTarget();
-  const { stop } = expose({ value, from: t1, to: t2, scope });
-  const proxy = createProxy<T>({ from: t1, to: t2, scope });
+  return [withSource(t1, t2), withSource(t2, t1)];
+};
+
+const exposeValue = <T extends Exportable>(
+  value: T,
+  { scope = null }: { scope?: string | null } = {}
+): { proxy: Remote<T>; release(): void } => {
+  const [t1, t2] = createMessageChannel();
+  const { release } = createModule({
+    export: value,
+    from: t1,
+    namespace: scope,
+  });
+  const proxy = useModule<T>({ from: t1, to: t2, namespace: scope });
   // @ts-expect-error Type instantiation is excessively deep and possibly infinite.
-  return { proxy, stop };
+  return { proxy, release };
 };
 
 const scheduleTask = <R>(callback?: () => R) =>
-  new Promise(resolve => setTimeout(() => resolve(callback?.())));
+  new Promise((resolve) => setTimeout(() => resolve(callback?.())));
 
 describe("transporter", () => {
   test("exposing undefined", async () => {
@@ -166,8 +210,8 @@ describe("transporter", () => {
       c: 3,
       d: {
         da: undefined as undefined,
-        db: [24, true, { db2a }]
-      }
+        db: [24, true, { db2a }],
+      },
     });
 
     expect(await proxy.a.aa).toEqual(null);
@@ -185,6 +229,42 @@ describe("transporter", () => {
     expect(ab).toHaveBeenCalledWith();
     expect(db2a).toHaveBeenCalledTimes(1);
     expect(db2a).toHaveBeenCalledWith();
+  });
+
+  test("destructuring an exposed object", async () => {
+    const { proxy } = exposeValue({
+      a: { aa: "test" },
+      b: "🥸",
+      c: 3,
+    });
+
+    const { a: aP, b: bP, c: cP } = proxy;
+
+    expect(await aP.aa).toEqual("test");
+    expect(await bP).toEqual("🥸");
+    expect(await cP).toEqual(3);
+
+    const { a, b, c } = await proxy;
+
+    expect(a.aa).toEqual("test");
+    expect(b).toEqual("🥸");
+    expect(c).toEqual(3);
+  });
+
+  test("destructuring an exposed array", async () => {
+    const { proxy } = exposeValue(["a", "b", { c: "C" }]);
+
+    const [aP, bP, cP] = proxy;
+
+    expect(await aP).toEqual("a");
+    expect(await bP).toEqual("b");
+    expect(await cP).toEqual({ c: "C" });
+
+    const [a, b, c] = await proxy;
+
+    expect(a).toEqual("a");
+    expect(b).toEqual("b");
+    expect(c).toEqual({ c: "C" });
   });
 
   test("calling an exposed function with an argument of type undefined", async () => {
@@ -259,8 +339,8 @@ describe("transporter", () => {
 
   test("callback chaining", async () => {
     const a = jest.fn(() => "🥸");
-    const b = jest.fn(cb => cb());
-    const c = jest.fn(cb => cb(a));
+    const b = jest.fn((cb) => cb());
+    const c = jest.fn((cb) => cb(a));
     const { proxy } = exposeValue(c);
 
     expect(await proxy(b)).toBe("🥸");
@@ -329,6 +409,31 @@ describe("transporter", () => {
     expect(c).toHaveBeenCalledWith();
   });
 
+  test("function spread arguments", async () => {
+    const sum = (...numbers: number[]) =>
+      numbers.reduce((sum, num) => sum + num, 0);
+    const { proxy } = exposeValue(jest.fn(sum));
+
+    expect(await proxy(1, 2, 3)).toEqual(6);
+    expect(await proxy(...[1, 2, 3])).toEqual(6);
+  });
+
+  test("function apply", async () => {
+    const sum = (...numbers: number[]) =>
+      numbers.reduce((sum, num) => sum + num, 0);
+    const { proxy } = exposeValue(jest.fn(sum));
+
+    expect(await proxy.apply(null, [1, 2, 3])).toEqual(6);
+  });
+
+  test("function call", async () => {
+    const sum = (...numbers: number[]) =>
+      numbers.reduce((sum, num) => sum + num, 0);
+    const { proxy } = exposeValue(jest.fn(sum));
+
+    expect(await proxy.call(null, 1, 2, 3)).toEqual(6);
+  });
+
   test("scoping exposed values", async () => {
     const { proxy: proxyA } = exposeValue("a", { scope: "A" });
     const { proxy: proxyB } = exposeValue("b", { scope: "B" });
@@ -338,32 +443,30 @@ describe("transporter", () => {
   });
 
   test("2-way exposure", async () => {
-    const t1 = createMessageTarget();
-    const t2 = createMessageTarget();
+    const [t1, t2] = createMessageChannel();
 
-    expose({ value: "a", from: t1, to: t2 });
-    expose({ value: "b", from: t2, to: t1 });
+    createModule({ export: "a", from: t1 });
+    createModule({ export: "b", from: t2 });
 
-    const proxyA = createProxy({ from: t1, to: t2 });
-    const proxyB = createProxy({ from: t2, to: t1 });
+    const proxyA = useModule({ from: t1, to: t2 });
+    const proxyB = useModule({ from: t2, to: t1 });
 
     expect(await proxyA).toEqual("a");
     expect(await proxyB).toEqual("b");
   });
 
   test("It only responds to messages with the correct scope and source", () => {
-    const t1 = createMessageTarget();
-    const t2 = createMessageTarget();
+    const [t1, t2] = createMessageChannel();
     const spy = jest.spyOn(t2, "postMessage");
 
-    expose({ value: "a", from: t1, to: t2, scope: "A" });
+    createModule({ export: "a", from: t1, namespace: "A" });
 
     const message = {
       id: 1,
       path: [],
       scope: "B",
       source: "jest",
-      type: "get"
+      type: "get",
     };
 
     t1.postMessage(JSON.stringify(message));
@@ -386,7 +489,7 @@ describe("transporter", () => {
         scope: "A",
         source: "transporter",
         type: "set",
-        value: "a"
+        value: "a",
       })
     );
   });
@@ -394,9 +497,8 @@ describe("transporter", () => {
   test("the promise will be rejected if a signal is not received in the allowed time", async () => {
     jest.useFakeTimers();
 
-    const t1 = createMessageTarget();
-    const t2 = createMessageTarget();
-    const proxy = createProxy({ from: t1, timeout: 1000, to: t2 });
+    const [t1, t2] = createMessageChannel();
+    const proxy = useModule({ from: t1, timeout: 1000, to: t2 });
     // eslint-disable-next-line jest/valid-expect
     const assertion = expect(proxy).rejects.toThrow(TimeoutError);
 
@@ -409,7 +511,7 @@ describe("transporter", () => {
     jest.useFakeTimers();
 
     const { proxy } = exposeValue(
-      () => new Promise(resolve => setTimeout(() => resolve("ok"), 2000))
+      () => new Promise((resolve) => setTimeout(() => resolve("ok"), 2000))
     );
 
     // eslint-disable-next-line jest/valid-expect
@@ -421,12 +523,11 @@ describe("transporter", () => {
   });
 
   test("transferred functions are garbage collected", async () => {
-    const t1 = createMessageTarget();
-    const t2 = createMessageTarget();
+    const [t1, t2] = createMessageChannel();
     const spy = jest.spyOn(t1, "postMessage");
 
-    expose({ value: () => () => "🥸", from: t1, to: t2 });
-    const proxy = createProxy<() => () => string>({ from: t1, to: t2 });
+    createModule({ export: () => () => "🥸", from: t1 });
+    const proxy = useModule<() => () => string>({ from: t1, to: t2 });
     let proxyFunc: (() => Promise<string>) | null = await proxy();
 
     globalThis.gc();
@@ -446,6 +547,6 @@ describe("transporter", () => {
     );
 
     proxyFunc = await proxy();
-    expect(await proxyFunc()).toEqual("🥸");
+    expect(await proxyFunc?.()).toEqual("🥸");
   });
 });

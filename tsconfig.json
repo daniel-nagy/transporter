@@ -17,6 +17,9 @@
     "types": []
   },
   "include": [
-    "index.ts"
+    "src/**/*"
+  ],
+  "exclude": [
+    "src/**/*.test.ts"
   ]
 }

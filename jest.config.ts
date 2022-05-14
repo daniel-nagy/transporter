@@ -13,5 +13,6 @@ export default {
       tsconfig: "tsconfig.test.json",
     },
   },
+  modulePaths: ["<rootDir>/src/"],
   preset: "ts-jest",
 };
