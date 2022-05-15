@@ -18,7 +18,7 @@ declare global {
 export const MESSAGE_SOURCE = "transporter";
 
 export interface ExternalMessageTarget {
-  postMessage(message: string): void;
+  postMessage(message: string, targetOrigin?: string): void;
 }
 
 export interface InternalMessageTarget {
@@ -73,6 +73,7 @@ interface ISetValueMessage extends IMessage {
 type Channel = {
   readonly external: ExternalMessageTarget;
   readonly internal: InternalMessageTarget;
+  readonly origin?: string;
   readonly scope: string | null;
   readonly timeout: number;
 };
@@ -183,9 +184,9 @@ export function createModule<T extends Exportable>({
               scope,
               source: MESSAGE_SOURCE,
               type: MessageType.Set,
-              value: await (getIn(api, message.path) as ExportableFunction)(
-                ...message.args
-              ),
+              value: await (
+                getFunctionWithContext(api, message.path) as ExportableFunction
+              )(...message.args),
             },
           })
         );
@@ -233,15 +234,19 @@ export function createModule<T extends Exportable>({
 export function useModule<T>({
   from: external,
   namespace: scope = null,
+  origin,
   timeout = 1000,
   to: internal = self,
 }: {
   from: ExternalMessageTarget;
   namespace?: string | null;
+  origin?: string;
   timeout?: number;
   to?: InternalMessageTarget;
 }): Remote<T> {
-  return createProxy({ channel: { external, internal, scope, timeout } });
+  return createProxy({
+    channel: { external, internal, origin, scope, timeout },
+  });
 }
 
 function awaitResponse<T extends Exported<Exportable>>({
@@ -288,10 +293,11 @@ function awaitResponse<T extends Exported<Exportable>>({
       encode({
         channel,
         message: { id, scope, source: MESSAGE_SOURCE, type: MessageType.Ping },
-      })
+      }),
+      channel.origin
     );
 
-    channel.external.postMessage(encode({ channel, message }));
+    channel.external.postMessage(encode({ channel, message }), channel.origin);
   });
 }
 
@@ -304,38 +310,36 @@ function createProxy<T>({
 }): Remote<T> {
   return new Proxy((() => {}) as Remote<T>, {
     apply(_target, _thisArg, args) {
-      return awaitResponse({
-        channel,
-        message: {
-          args,
-          id: generateId(),
-          path,
-          scope: channel.scope,
-          source: MESSAGE_SOURCE,
-          type: MessageType.Call,
-        },
-      });
-    },
-    get(target, prop, receiver) {
-      switch (prop) {
-        case "apply":
-        case "call": {
-          return Reflect.get(target, prop, receiver);
-        }
-        case "then": {
-          const promise = awaitResponse({
+      const [func] = path.slice(-1);
+
+      switch (func) {
+        case "then":
+          return awaitResponse({
             channel,
             message: {
               id: generateId(),
-              path,
+              path: path.slice(0, -1),
               scope: channel.scope,
               source: MESSAGE_SOURCE,
               type: MessageType.Get,
             },
+          }).then(...args);
+        default:
+          return awaitResponse({
+            channel,
+            message: {
+              args,
+              id: generateId(),
+              path,
+              scope: channel.scope,
+              source: MESSAGE_SOURCE,
+              type: MessageType.Call,
+            },
           });
-
-          return promise.then.bind(promise);
-        }
+      }
+    },
+    get(_target, prop) {
+      switch (prop) {
         case Symbol.iterator:
           return function* () {
             for (let index = 0; true; index += 1) {
@@ -399,6 +403,14 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
 
 function generateId(): string {
   return Math.random().toString(36).slice(2, 11);
+}
+
+function getFunctionWithContext(api: Exportable, path: ObjectPath): Function {
+  const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
+
+  return name
+    ? (...args: Exportable[]) => (getIn(api, subpath) as any)[name]?.(...args)
+    : (getIn(api, path) as Function);
 }
 
 function isEncodedFunction(value: unknown): value is EncodedFunction {

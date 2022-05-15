@@ -423,7 +423,7 @@ describe("transporter", () => {
       numbers.reduce((sum, num) => sum + num, 0);
     const { proxy } = exposeValue(jest.fn(sum));
 
-    expect(await proxy.apply(null, [1, 2, 3])).toEqual(6);
+    expect(await proxy.apply(proxy, [1, 2, 3])).toEqual(6);
   });
 
   test("function call", async () => {
@@ -431,7 +431,16 @@ describe("transporter", () => {
       numbers.reduce((sum, num) => sum + num, 0);
     const { proxy } = exposeValue(jest.fn(sum));
 
-    expect(await proxy.call(null, 1, 2, 3)).toEqual(6);
+    expect(await proxy.call(proxy, 1, 2, 3)).toEqual(6);
+  });
+
+  test("providing a this value to call", async () => {
+    const { proxy } = exposeValue(
+      jest.fn(function test(this: any) {
+        return this;
+      })
+    );
+    expect(await proxy.call({ a: "a" })).toEqual({ a: "a" });
   });
 
   test("scoping exposed values", async () => {
