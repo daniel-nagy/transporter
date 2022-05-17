@@ -28,6 +28,7 @@ export interface InternalMessageTarget {
 
 enum MessageType {
   Call = "call",
+  Error = "error",
   GarbageCollect = "garbage_collect",
   Get = "get",
   Ping = "ping",
@@ -46,6 +47,11 @@ interface ICallFunctionMessage extends IMessage {
   readonly args: Exportable[];
   readonly path: ObjectPath;
   readonly type: MessageType.Call;
+}
+
+interface IErrorMessage extends IMessage {
+  readonly type: MessageType.Error;
+  readonly error: Exportable;
 }
 
 interface IGarbageCollectMessage extends IMessage {
@@ -78,11 +84,11 @@ type Channel = {
   readonly timeout: number;
 };
 
-type AnyFunction = (...args: any[]) => any;
 type EncodedFunction = { scope: string; type: "function" };
 type EncodedUndefined = { type: "undefined" };
 type Message =
   | ICallFunctionMessage
+  | IErrorMessage
   | IGarbageCollectMessage
   | IGetValueMessage
   | IPingMessage
@@ -90,8 +96,6 @@ type Message =
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 type Nothing = undefined | null;
-type UnknownArray = unknown[];
-type UnknownObject = { [key: string]: unknown };
 
 export type Exportable =
   | boolean
@@ -109,26 +113,37 @@ export type ExportableFunction = (
 
 export type ExportableObject = { [key: string]: Exportable };
 
-export type Exported<T> = T extends UnknownObject
-  ? { [key in keyof T]: Exported<T[key]> }
-  : T extends AnyFunction
+export type Exported<T extends Exportable> = T extends
+  | Exportable[]
+  | ExportableObject
+  ? // @ts-expect-error Type 'T[key]' does not satisfy the constraint 'Exportable'.
+    { [key in keyof T]: Exported<T[key]> }
+  : T extends ExportableFunction
   ? Proxied<T>
   : T;
 
 export type MessageEvent = { data: string; source: ExternalMessageTarget };
 export type MessageSubscriber = (event: MessageEvent) => void;
 
+export type NamedExports = {
+  [key: string]: Exportable;
+};
+
 export type Proxied<T> = T extends (...args: infer A) => infer R
-  ? (...args: Exported<A>) => Promisify<Exported<R>>
+  ? // @ts-expect-error Type 'A' does not satisfy the constraint 'Exportable'.
+    //                  Type 'R' does not satisfy the constraint 'Exportable'.
+    (...args: Exported<A>) => Promisify<Exported<R>>
   : never;
 
-export type Remote<T> = T extends Nothing
+export type RemoteExport<T extends Exportable> = T extends Nothing
   ? Promise<T>
-  : T extends UnknownArray | UnknownObject
-  ? Promise<T> & { [key in keyof T]: Remote<T[key]> }
-  : T extends AnyFunction
+  : T extends ExportableFunction
   ? Proxied<T>
-  : Promisify<T>;
+  : Promise<Exported<T>>;
+
+export type RemoteModule<T extends NamedExports> = {
+  [key in keyof T]: RemoteExport<T[key]>;
+};
 
 export class TimeoutError extends Error {
   readonly name = "TimeoutError";
@@ -155,7 +170,7 @@ const registry = createRegistry<Channel>((channel) => {
   );
 });
 
-export function createModule<T extends Exportable>({
+export function createModule<T extends NamedExports>({
   export: api,
   from: internal = self,
   namespace: scope = null,
@@ -176,20 +191,38 @@ export function createModule<T extends Exportable>({
 
     switch (message.type) {
       case MessageType.Call:
-        event.source.postMessage(
-          encode({
-            channel,
-            message: {
-              id: message.id,
-              scope,
-              source: MESSAGE_SOURCE,
-              type: MessageType.Set,
-              value: await (
-                getFunctionWithContext(api, message.path) as ExportableFunction
-              )(...message.args),
-            },
-          })
-        );
+        try {
+          event.source.postMessage(
+            encode({
+              channel,
+              message: {
+                id: message.id,
+                scope,
+                source: MESSAGE_SOURCE,
+                type: MessageType.Set,
+                value: await (
+                  getFunctionWithContext(
+                    api,
+                    message.path
+                  ) as ExportableFunction
+                )(...message.args),
+              },
+            })
+          );
+        } catch (exception) {
+          event.source.postMessage(
+            encode({
+              channel,
+              message: {
+                id: message.id,
+                scope,
+                source: MESSAGE_SOURCE,
+                type: MessageType.Error,
+                error: exception as Exportable,
+              },
+            })
+          );
+        }
         break;
       case MessageType.GarbageCollect:
         release();
@@ -231,7 +264,7 @@ export function createModule<T extends Exportable>({
   return { release };
 }
 
-export function useModule<T>({
+export function useModule<T extends NamedExports>({
   from: external,
   namespace: scope = null,
   origin,
@@ -243,13 +276,13 @@ export function useModule<T>({
   origin?: string;
   timeout?: number;
   to?: InternalMessageTarget;
-}): Remote<T> {
+}): RemoteModule<T> {
   return createProxy({
     channel: { external, internal, origin, scope, timeout },
   });
 }
 
-function awaitResponse<T extends Exported<Exportable>>({
+function awaitResponse<T extends Exportable>({
   channel,
   message,
 }: {
@@ -258,7 +291,7 @@ function awaitResponse<T extends Exported<Exportable>>({
 }): Promise<T> {
   return new Promise<T>((resolve, reject) => {
     const { id, scope } = message;
-    const { cancel } = schedule(channel.timeout, () =>
+    const { cancel: cancelTimeout } = schedule(channel.timeout, () =>
       reject(new TimeoutError("A signal was not received in the allowed time."))
     );
 
@@ -272,20 +305,20 @@ function awaitResponse<T extends Exported<Exportable>>({
         message: data,
       });
 
-      if (message.type === MessageType.Pong) cancel();
-      if (message.type !== MessageType.Set) return;
-
-      channel.internal.removeEventListener("message", onMessage);
-
-      switch (typeof message.value) {
-        case "function":
-          // Wrap the function to prevent `resolve` from calling `then` on the
-          // proxied value which will cause an infinite loop.
-          resolve(((...args: Exportable[]) =>
-            (message.value as ExportableFunction)(...args)) as T);
+      switch (message.type) {
+        case MessageType.Pong:
+          cancelTimeout();
+          break;
+        case MessageType.Set:
+          channel.internal.removeEventListener("message", onMessage);
+          resolve(message.value as T);
+          break;
+        case MessageType.Error:
+          channel.internal.removeEventListener("message", onMessage);
+          reject(message.error);
           break;
         default:
-          resolve(message.value as T);
+        // no default
       }
     });
 
@@ -301,14 +334,16 @@ function awaitResponse<T extends Exported<Exportable>>({
   });
 }
 
-function createProxy<T>({
+function createProxy<T extends NamedExports>({
   channel,
   path = [],
+  promiseLike = true,
 }: {
   channel: Channel;
   path?: ObjectPath;
-}): Remote<T> {
-  return new Proxy((() => {}) as Remote<T>, {
+  promiseLike?: boolean;
+}): RemoteModule<T> {
+  return new Proxy((() => {}) as unknown as RemoteModule<T>, {
     apply(_target, _thisArg, args) {
       const [func] = path.slice(-1);
 
@@ -338,20 +373,21 @@ function createProxy<T>({
           });
       }
     },
-    get(_target, prop) {
-      switch (prop) {
-        case Symbol.iterator:
-          return function* () {
-            for (let index = 0; true; index += 1) {
-              yield createProxy({
-                channel,
-                path: [...path, index.toString()],
-              });
-            }
-          };
+    get(_target, prop, _receiver) {
+      switch (true) {
+        case typeof prop === "symbol":
+          return undefined;
+        case prop === "then" && !promiseLike:
+          return undefined;
         default:
-          return createProxy({ channel, path: [...path, prop.toString()] });
+          return createProxy({ channel, path: [...path, prop as string] });
       }
+    },
+    ownKeys(_target) {
+      // Prevents enumeration of the proxy. Attempting to enumerate the proxy
+      // will throw a `TypeError`, this includes using the rest syntax when
+      // destructuring the proxy.
+      return undefined as unknown as [];
     },
   });
 }
@@ -368,6 +404,7 @@ function decode({
       case isEncodedFunction(value): {
         const proxy = createProxy({
           channel: { ...channel, scope: value.scope },
+          promiseLike: false,
         });
         registry?.register(proxy, { ...channel, scope: value.scope });
         return proxy;

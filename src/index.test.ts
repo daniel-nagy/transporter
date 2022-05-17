@@ -4,7 +4,7 @@ import {
   ExternalMessageTarget,
   InternalMessageTarget,
   MessageSubscriber,
-  Remote,
+  RemoteExport,
   TimeoutError,
   useModule,
 } from "./index";
@@ -60,151 +60,156 @@ const createMessageChannel = () => {
   return [withSource(t1, t2), withSource(t2, t1)];
 };
 
-const exposeValue = <T extends Exportable>(
+const exportValue = <T extends Exportable>(
   value: T,
-  { scope = null }: { scope?: string | null } = {}
-): { proxy: Remote<T>; release(): void } => {
+  { namespace = null }: { namespace?: string | null } = {}
+): { proxy: RemoteExport<T>; release(): void } => {
   const [t1, t2] = createMessageChannel();
+
   const { release } = createModule({
-    export: value,
+    export: { default: value },
     from: t1,
-    namespace: scope,
+    namespace,
   });
-  const proxy = useModule<T>({ from: t1, to: t2, namespace: scope });
-  // @ts-expect-error Type instantiation is excessively deep and possibly infinite.
-  return { proxy, release };
+
+  const { default: remoteValue } = useModule<{ default: T }>({
+    from: t1,
+    to: t2,
+    namespace,
+  });
+
+  return { proxy: remoteValue, release };
 };
 
 const scheduleTask = <R>(callback?: () => R) =>
   new Promise((resolve) => setTimeout(() => resolve(callback?.())));
 
 describe("transporter", () => {
-  test("exposing undefined", async () => {
-    const { proxy } = exposeValue(undefined as undefined);
+  test("exporting undefined", async () => {
+    const { proxy } = exportValue(undefined as undefined);
     expect(await proxy).toEqual(undefined);
   });
 
-  test("exposing a number", async () => {
-    const { proxy } = exposeValue(1);
+  test("exporting a number", async () => {
+    const { proxy } = exportValue(1);
     expect(await proxy).toEqual(1);
   });
 
-  test("exposing a boolean", async () => {
-    const { proxy } = exposeValue(true);
+  test("exporting a boolean", async () => {
+    const { proxy } = exportValue(true);
     expect(await proxy).toEqual(true);
   });
 
-  test("exposing a string", async () => {
-    const { proxy } = exposeValue("🥸");
+  test("exporting a string", async () => {
+    const { proxy } = exportValue("🥸");
     expect(await proxy).toEqual("🥸");
   });
 
-  test("exposing null", async () => {
-    const { proxy } = exposeValue(null as null);
+  test("exporting null", async () => {
+    const { proxy } = exportValue(null as null);
     expect(await proxy).toEqual(null);
   });
 
-  test("exposing a function with no arguments or return value", async () => {
+  test("exporting a function with no arguments or return value", async () => {
     const value = jest.fn();
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
   });
 
-  test("exposing an empty object", async () => {
-    const { proxy } = exposeValue({});
+  test("exporting an empty object", async () => {
+    const { proxy } = exportValue({});
     expect(await proxy).toEqual({});
   });
 
-  test("exposing an empty array", async () => {
-    const { proxy } = exposeValue([]);
+  test("exporting an empty array", async () => {
+    const { proxy } = exportValue([]);
     expect(await proxy).toEqual([]);
   });
 
-  test("exposing an object with a property of type undefined", async () => {
-    const { proxy } = exposeValue({ prop: undefined as undefined });
+  test("exporting an object with a property of type undefined", async () => {
+    const { proxy } = exportValue({ prop: undefined as undefined });
     expect(await proxy).toEqual({ prop: undefined });
   });
 
-  test("exposing an object with a property of type number", async () => {
-    const { proxy } = exposeValue({ prop: 12 });
+  test("exporting an object with a property of type number", async () => {
+    const { proxy } = exportValue({ prop: 12 });
     expect(await proxy).toEqual({ prop: 12 });
   });
 
-  test("exposing an object with a property of type boolean", async () => {
-    const { proxy } = exposeValue({ prop: false });
+  test("exporting an object with a property of type boolean", async () => {
+    const { proxy } = exportValue({ prop: false });
     expect(await proxy).toEqual({ prop: false });
   });
 
-  test("exposing an object with a property of type string", async () => {
-    const { proxy } = exposeValue({ prop: "🥸" });
+  test("exporting an object with a property of type string", async () => {
+    const { proxy } = exportValue({ prop: "🥸" });
     expect(await proxy).toEqual({ prop: "🥸" });
   });
 
-  test("exposing an object with a property of type null", async () => {
-    const { proxy } = exposeValue({ prop: null as null });
+  test("exporting an object with a property of type null", async () => {
+    const { proxy } = exportValue({ prop: null as null });
     expect(await proxy).toEqual({ prop: null });
   });
 
-  test("exposing an object with a property of type function", async () => {
+  test("exporting an object with a property of type function", async () => {
     const value = jest.fn();
-    const { proxy } = exposeValue({ prop: value });
-    await proxy.prop();
+    const { proxy } = exportValue({ prop: value });
+    (await proxy).prop();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
   });
 
-  test("exposing an array with an item of type undefined", async () => {
-    const { proxy } = exposeValue([undefined as undefined]);
+  test("exporting an array with an item of type undefined", async () => {
+    const { proxy } = exportValue([undefined as undefined]);
     expect(await proxy).toEqual([undefined]);
   });
 
-  test("exposing an array with an item of type number", async () => {
-    const { proxy } = exposeValue([23]);
+  test("exporting an array with an item of type number", async () => {
+    const { proxy } = exportValue([23]);
     expect(await proxy).toEqual([23]);
   });
 
-  test("exposing an array with an item of type boolean", async () => {
-    const { proxy } = exposeValue([true]);
+  test("exporting an array with an item of type boolean", async () => {
+    const { proxy } = exportValue([true]);
     expect(await proxy).toEqual([true]);
   });
 
-  test("exposing an array with an item of type string", async () => {
-    const { proxy } = exposeValue(["🥸"]);
+  test("exporting an array with an item of type string", async () => {
+    const { proxy } = exportValue(["🥸"]);
     expect(await proxy).toEqual(["🥸"]);
   });
 
-  test("exposing an array with an item of type null", async () => {
-    const { proxy } = exposeValue([null as null]);
+  test("exporting an array with an item of type null", async () => {
+    const { proxy } = exportValue([null as null]);
     expect(await proxy).toEqual([null]);
   });
 
-  test("exposing an array with an item of type function", async () => {
+  test("exporting an array with an item of type function", async () => {
     const value = jest.fn();
-    const { proxy } = exposeValue([value]);
-    await proxy[0]();
+    const { proxy } = exportValue([value]);
+    (await proxy)[0]();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
   });
 
-  test("dereferencing an exposed function returns a wrapper function", async () => {
+  test("executing a lazy promise on an exported function creates a new proxy for the same function", async () => {
     const value = jest.fn((arg: string) => ({ ok: arg }));
-    const { proxy } = exposeValue(value);
-    const wrappedValue = await proxy;
+    const { proxy } = exportValue(value);
+    const newValue = await proxy;
 
-    expect(typeof wrappedValue).toBe("function");
     expect(value).not.toHaveBeenCalled();
-    expect(await wrappedValue("🥸")).toEqual({ ok: "🥸" });
+    expect(await newValue("🥸")).toEqual({ ok: "🥸" });
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith("🥸");
   });
 
-  test("exposing a complex object", async () => {
+  test("exporting a complex object", async () => {
     const ab = jest.fn();
     const db2a = jest.fn();
 
-    const { proxy } = exposeValue({
+    const { proxy } = exportValue({
       a: { aa: null as null, ab },
       b: "🥸",
       c: 3,
@@ -214,16 +219,18 @@ describe("transporter", () => {
       },
     });
 
-    expect(await proxy.a.aa).toEqual(null);
-    expect(await proxy.b).toEqual("🥸");
-    expect(await proxy.c).toEqual(3);
-    expect(await proxy.d.da).toEqual(undefined);
-    expect(await proxy.d.db[0]).toEqual(24);
-    expect(await proxy.d.db[1]).toEqual(true);
+    const value = await proxy;
 
-    await proxy.a.ab();
-    // @ts-expect-error Property 'db2a' does not exist on type 'Promise<number>'
-    await proxy.d.db[2].db2a();
+    expect(value.a.aa).toEqual(null);
+    expect(value.b).toEqual("🥸");
+    expect(value.c).toEqual(3);
+    expect(value.d.da).toEqual(undefined);
+    expect(value.d.db[0]).toEqual(24);
+    expect(value.d.db[1]).toEqual(true);
+
+    await value.a.ab();
+    // @ts-expect-error Property 'db2a' does not exist on type 'number'
+    await value.d.db[2].db2a();
 
     expect(ab).toHaveBeenCalledTimes(1);
     expect(ab).toHaveBeenCalledWith();
@@ -231,94 +238,88 @@ describe("transporter", () => {
     expect(db2a).toHaveBeenCalledWith();
   });
 
-  test("destructuring an exposed object", async () => {
-    const { proxy } = exposeValue({
-      a: { aa: "test" },
-      b: "🥸",
-      c: 3,
-    });
+  test("destructuring named exports", async () => {
+    const [t1, t2] = createMessageChannel();
+    createModule({ export: { a: "a", b: "b", c: "c" }, from: t1 });
+    const proxy = useModule<{ a: "a"; b: "b"; c: "c" }>({ from: t1, to: t2 });
+    const { a, b, c } = proxy;
 
-    const { a: aP, b: bP, c: cP } = proxy;
-
-    expect(await aP.aa).toEqual("test");
-    expect(await bP).toEqual("🥸");
-    expect(await cP).toEqual(3);
-
-    const { a, b, c } = await proxy;
-
-    expect(a.aa).toEqual("test");
-    expect(b).toEqual("🥸");
-    expect(c).toEqual(3);
+    expect(await a).toEqual("a");
+    expect(await b).toEqual("b");
+    expect(await c).toEqual("c");
   });
 
-  test("destructuring an exposed array", async () => {
-    const { proxy } = exposeValue(["a", "b", { c: "C" }]);
+  test("enumerating named exports throws a TypeError", () => {
+    const [t1, t2] = createMessageChannel();
+    createModule({ export: { a: "a", b: "b", c: "c" }, from: t1 });
+    const proxy = useModule<{ a: "a"; b: "b"; c: "c" }>({ from: t1, to: t2 });
 
-    const [aP, bP, cP] = proxy;
+    expect(() => {
+      const { ...values } = proxy;
+    }).toThrow(TypeError);
 
-    expect(await aP).toEqual("a");
-    expect(await bP).toEqual("b");
-    expect(await cP).toEqual({ c: "C" });
+    expect(() => Object.keys(proxy)).toThrow(TypeError);
+    expect(() => Object.values(proxy)).toThrow(TypeError);
+    expect(() => Object.entries(proxy)).toThrow(TypeError);
 
-    const [a, b, c] = await proxy;
-
-    expect(a).toEqual("a");
-    expect(b).toEqual("b");
-    expect(c).toEqual({ c: "C" });
+    expect(() => {
+      for (const _key in proxy) {
+      }
+    }).toThrow(TypeError);
   });
 
-  test("calling an exposed function with an argument of type undefined", async () => {
+  test("calling an exported function with an argument of type undefined", async () => {
     const value = jest.fn((_arg?: string) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy(undefined);
     expect(value).toHaveBeenCalledWith(undefined);
   });
 
-  test("calling an exposed function with an argument of type number", async () => {
+  test("calling an exported function with an argument of type number", async () => {
     const value = jest.fn((_arg: number) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy(2);
     expect(value).toHaveBeenCalledWith(2);
   });
 
-  test("calling an exposed function with an argument of type boolean", async () => {
+  test("calling an exported function with an argument of type boolean", async () => {
     const value = jest.fn((_arg: boolean) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy(false);
     expect(value).toHaveBeenCalledWith(false);
   });
 
-  test("calling an exposed function with an argument of type string", async () => {
+  test("calling an exported function with an argument of type string", async () => {
     const value = jest.fn((_arg: string) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy("🥸");
     expect(value).toHaveBeenCalledWith("🥸");
   });
 
-  test("calling an exposed function with an argument of type null", async () => {
+  test("calling an exported function with an argument of type null", async () => {
     const value = jest.fn((_arg: string | null) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy(null);
     expect(value).toHaveBeenCalledWith(null);
   });
 
-  test("calling an exposed function with an argument of type object", async () => {
+  test("calling an exported function with an argument of type object", async () => {
     const value = jest.fn((_arg: Record<string, unknown>) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy({ a: "a" });
     expect(value).toHaveBeenCalledWith({ a: "a" });
   });
 
-  test("calling an exposed function with an argument of type array", async () => {
+  test("calling an exported function with an argument of type array", async () => {
     const value = jest.fn((_arg: string[]) => {});
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     await proxy(["a", "b"]);
     expect(value).toHaveBeenCalledWith(["a", "b"]);
   });
 
-  test("calling an exposed function with an argument of type function", async () => {
+  test("calling an exported function with an argument of type function", async () => {
     const value = jest.fn((cb: () => void) => cb());
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     const callback = jest.fn();
 
     await proxy(callback);
@@ -326,9 +327,19 @@ describe("transporter", () => {
     expect(callback).toHaveBeenCalledTimes(1);
   });
 
+  test("calling an exported function that throws an error", async () => {
+    const value = jest.fn(() => {
+      throw "💣";
+    });
+
+    const { proxy } = exportValue(value);
+
+    await expect(proxy).rejects.toBe("💣");
+  });
+
   test("callback arguments", async () => {
     const value = jest.fn((cb: (arg: string) => void) => cb("🥸"));
-    const { proxy } = exposeValue(value);
+    const { proxy } = exportValue(value);
     const callback = jest.fn();
 
     await proxy(callback);
@@ -341,7 +352,7 @@ describe("transporter", () => {
     const a = jest.fn(() => "🥸");
     const b = jest.fn((cb) => cb());
     const c = jest.fn((cb) => cb(a));
-    const { proxy } = exposeValue(c);
+    const { proxy } = exportValue(c);
 
     expect(await proxy(b)).toBe("🥸");
     expect(c).toHaveBeenCalledTimes(1);
@@ -349,43 +360,43 @@ describe("transporter", () => {
     expect(a).toHaveBeenCalledTimes(1);
   });
 
-  test("calling an exposed function with a return value of type undefined", async () => {
-    const { proxy } = exposeValue(jest.fn(() => {}));
+  test("calling an exported function with a return value of type undefined", async () => {
+    const { proxy } = exportValue(jest.fn(() => {}));
     expect(await proxy()).toEqual(undefined);
   });
 
-  test("calling an exposed function with a return value of type number", async () => {
-    const { proxy } = exposeValue(jest.fn(() => 3));
+  test("calling an exported function with a return value of type number", async () => {
+    const { proxy } = exportValue(jest.fn(() => 3));
     expect(await proxy()).toEqual(3);
   });
 
-  test("calling an exposed function with a return value of type boolean", async () => {
-    const { proxy } = exposeValue(jest.fn(() => true));
+  test("calling an exported function with a return value of type boolean", async () => {
+    const { proxy } = exportValue(jest.fn(() => true));
     expect(await proxy()).toEqual(true);
   });
 
-  test("calling an exposed function with a return value of type string", async () => {
-    const { proxy } = exposeValue(jest.fn(() => "🥸"));
+  test("calling an exported function with a return value of type string", async () => {
+    const { proxy } = exportValue(jest.fn(() => "🥸"));
     expect(await proxy()).toEqual("🥸");
   });
 
-  test("calling an exposed function with a return value of type null", async () => {
-    const { proxy } = exposeValue(jest.fn(() => null));
+  test("calling an exported function with a return value of type null", async () => {
+    const { proxy } = exportValue(jest.fn(() => null));
     expect(await proxy()).toEqual(null);
   });
 
-  test("calling an exposed function with a return value of type object", async () => {
-    const { proxy } = exposeValue(jest.fn(() => ({})));
+  test("calling an exported function with a return value of type object", async () => {
+    const { proxy } = exportValue(jest.fn(() => ({})));
     expect(await proxy()).toEqual({});
   });
 
-  test("calling an exposed function with a return value of type array", async () => {
-    const { proxy } = exposeValue(jest.fn(() => []));
+  test("calling an exported function with a return value of type array", async () => {
+    const { proxy } = exportValue(jest.fn(() => []));
     expect(await proxy()).toEqual([]);
   });
 
-  test("calling an exposed function with a return value of type function", async () => {
-    const { proxy } = exposeValue(jest.fn(() => () => {}));
+  test("calling an exported function with a return value of type function", async () => {
+    const { proxy } = exportValue(jest.fn(() => () => {}));
     expect(typeof (await proxy())).toEqual("function");
   });
 
@@ -394,7 +405,7 @@ describe("transporter", () => {
     const b = jest.fn(() => a);
     const c = jest.fn(() => b);
     const d = jest.fn(() => c);
-    const { proxy } = exposeValue(d);
+    const { proxy } = exportValue(d);
 
     const result = await (await (await (await proxy())())())();
 
@@ -412,7 +423,7 @@ describe("transporter", () => {
   test("function spread arguments", async () => {
     const sum = (...numbers: number[]) =>
       numbers.reduce((sum, num) => sum + num, 0);
-    const { proxy } = exposeValue(jest.fn(sum));
+    const { proxy } = exportValue(jest.fn(sum));
 
     expect(await proxy(1, 2, 3)).toEqual(6);
     expect(await proxy(...[1, 2, 3])).toEqual(6);
@@ -421,21 +432,41 @@ describe("transporter", () => {
   test("function apply", async () => {
     const sum = (...numbers: number[]) =>
       numbers.reduce((sum, num) => sum + num, 0);
-    const { proxy } = exposeValue(jest.fn(sum));
+    const { proxy } = exportValue(jest.fn(sum));
 
     expect(await proxy.apply(proxy, [1, 2, 3])).toEqual(6);
+  });
+
+  test("function apply with a different this arg", async () => {
+    const { proxy } = exportValue(
+      jest.fn(function test(this: any) {
+        return this;
+      })
+    );
+    expect(await proxy.apply({ a: "a" })).toEqual({ a: "a" });
+  });
+
+  test("function bind", async () => {
+    const { proxy } = exportValue(
+      jest.fn(function test(this: any) {
+        return this;
+      })
+    );
+
+    const newFunc = await proxy.bind({ a: "a" });
+    expect(await newFunc()).toEqual({ a: "a" });
   });
 
   test("function call", async () => {
     const sum = (...numbers: number[]) =>
       numbers.reduce((sum, num) => sum + num, 0);
-    const { proxy } = exposeValue(jest.fn(sum));
+    const { proxy } = exportValue(jest.fn(sum));
 
     expect(await proxy.call(proxy, 1, 2, 3)).toEqual(6);
   });
 
-  test("providing a this value to call", async () => {
-    const { proxy } = exposeValue(
+  test("function call with a different this arg", async () => {
+    const { proxy } = exportValue(
       jest.fn(function test(this: any) {
         return this;
       })
@@ -443,36 +474,36 @@ describe("transporter", () => {
     expect(await proxy.call({ a: "a" })).toEqual({ a: "a" });
   });
 
-  test("scoping exposed values", async () => {
-    const { proxy: proxyA } = exposeValue("a", { scope: "A" });
-    const { proxy: proxyB } = exposeValue("b", { scope: "B" });
+  test("namespaced exported values", async () => {
+    const { proxy: proxyA } = exportValue("a", { namespace: "A" });
+    const { proxy: proxyB } = exportValue("b", { namespace: "B" });
 
     expect(await proxyA).toEqual("a");
     expect(await proxyB).toEqual("b");
   });
 
-  test("2-way exposure", async () => {
+  test("bidirectional modules", async () => {
     const [t1, t2] = createMessageChannel();
 
-    createModule({ export: "a", from: t1 });
-    createModule({ export: "b", from: t2 });
+    createModule({ export: { default: "a" }, from: t1 });
+    createModule({ export: { default: "b" }, from: t2 });
 
-    const proxyA = useModule({ from: t1, to: t2 });
-    const proxyB = useModule({ from: t2, to: t1 });
+    const proxyA = useModule<{ default: string }>({ from: t1, to: t2 });
+    const proxyB = useModule<{ default: string }>({ from: t2, to: t1 });
 
-    expect(await proxyA).toEqual("a");
-    expect(await proxyB).toEqual("b");
+    expect(await proxyA.default).toEqual("a");
+    expect(await proxyB.default).toEqual("b");
   });
 
-  test("It only responds to messages with the correct scope and source", () => {
+  test("messages must have the correct scope and source", () => {
     const [t1, t2] = createMessageChannel();
     const spy = jest.spyOn(t2, "postMessage");
 
-    createModule({ export: "a", from: t1, namespace: "A" });
+    createModule({ export: { default: "a" }, from: t1, namespace: "A" });
 
     const message = {
       id: 1,
-      path: [],
+      path: ["default"],
       scope: "B",
       source: "jest",
       type: "get",
@@ -508,7 +539,6 @@ describe("transporter", () => {
 
     const [t1, t2] = createMessageChannel();
     const proxy = useModule({ from: t1, timeout: 1000, to: t2 });
-    // eslint-disable-next-line jest/valid-expect
     const assertion = expect(proxy).rejects.toThrow(TimeoutError);
 
     jest.advanceTimersByTime(1000);
@@ -516,14 +546,13 @@ describe("transporter", () => {
     jest.useRealTimers();
   });
 
-  test("an exposed function that returns a promise will not cause a timeout error", async () => {
+  test("an exported function that returns a promise will not cause a timeout error", async () => {
     jest.useFakeTimers();
 
-    const { proxy } = exposeValue(
+    const { proxy } = exportValue(
       () => new Promise((resolve) => setTimeout(() => resolve("ok"), 2000))
     );
 
-    // eslint-disable-next-line jest/valid-expect
     const assertion = expect(proxy()).resolves.toEqual("ok");
 
     jest.advanceTimersByTime(2000);
@@ -535,9 +564,14 @@ describe("transporter", () => {
     const [t1, t2] = createMessageChannel();
     const spy = jest.spyOn(t1, "postMessage");
 
-    createModule({ export: () => () => "🥸", from: t1 });
-    const proxy = useModule<() => () => string>({ from: t1, to: t2 });
-    let proxyFunc: (() => Promise<string>) | null = await proxy();
+    createModule({ export: { default: () => () => "🥸" }, from: t1 });
+
+    const proxy = useModule<{ default: () => () => string }>({
+      from: t1,
+      to: t2,
+    });
+
+    let proxyFunc: (() => Promise<string>) | null = await proxy.default();
 
     globalThis.gc();
     await scheduleTask();
@@ -555,7 +589,7 @@ describe("transporter", () => {
       expect.stringContaining('"type":"garbage_collect"')
     );
 
-    proxyFunc = await proxy();
+    proxyFunc = await proxy.default();
     expect(await proxyFunc?.()).toEqual("🥸");
   });
 });
