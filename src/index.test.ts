@@ -566,6 +566,7 @@ describe("transporter", () => {
       type: "set",
       value: {
         unsubscribe: {
+          isPromiseLike: false,
           scope: expect.stringMatching(/[\da-z]{9}/),
           type: "function",
         },

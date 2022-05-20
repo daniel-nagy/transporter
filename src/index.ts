@@ -29,7 +29,6 @@ enum MessageType {
   Call = "call",
   Error = "error",
   GarbageCollect = "garbage_collect",
-  Get = "get",
   Ping = "ping",
   Pong = "pong",
   Set = "set",
@@ -57,11 +56,6 @@ interface IGarbageCollectMessage extends IMessage {
   readonly type: MessageType.GarbageCollect;
 }
 
-interface IGetValueMessage extends IMessage {
-  readonly path: ObjectPath;
-  readonly type: MessageType.Get;
-}
-
 interface IPingMessage extends IMessage {
   readonly type: MessageType.Ping;
 }
@@ -83,18 +77,21 @@ type Channel = {
   readonly timeout: number;
 };
 
-type EncodedFunction = { scope: string; type: "function" };
+type EncodedFunction = {
+  isPromiseLike: boolean;
+  scope: string;
+  type: "function";
+};
+
 type EncodedUndefined = { type: "undefined" };
 type Message =
   | ICallFunctionMessage
   | IErrorMessage
   | IGarbageCollectMessage
-  | IGetValueMessage
   | IPingMessage
   | IPongMessage
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
-type Nothing = undefined | null;
 
 export type Exportable =
   | boolean
@@ -203,12 +200,7 @@ export function createModule<T extends NamedExports>({
                 scope,
                 source: MESSAGE_SOURCE,
                 type: MessageType.Set,
-                value: await (
-                  getFunctionWithContext(
-                    api,
-                    message.path
-                  ) as ExportableFunction
-                )(...message.args),
+                value: await callFunction(api, message.path, message.args),
               },
             })
           );
@@ -229,20 +221,6 @@ export function createModule<T extends NamedExports>({
         break;
       case MessageType.GarbageCollect:
         release();
-        break;
-      case MessageType.Get:
-        event.source.postMessage(
-          encode({
-            channel,
-            message: {
-              id: message.id,
-              scope,
-              source: MESSAGE_SOURCE,
-              type: MessageType.Set,
-              value: getIn(api, message.path) as Exportable,
-            },
-          })
-        );
         break;
       case MessageType.Ping:
         event.source.postMessage(
@@ -340,7 +318,7 @@ function awaitResponse<T extends Exportable>({
 function createProxy<T extends NamedExports>({
   channel,
   path = [],
-  promiseLike = true,
+  promiseLike = false,
 }: {
   channel: Channel;
   path?: ObjectPath;
@@ -348,33 +326,17 @@ function createProxy<T extends NamedExports>({
 }): RemoteModule<T> {
   return new Proxy((() => {}) as unknown as RemoteModule<T>, {
     apply(_target, _thisArg, args) {
-      const [func] = path.slice(-1);
-
-      switch (func) {
-        case "then":
-          return awaitResponse({
-            channel,
-            message: {
-              id: generateId(),
-              path: path.slice(0, -1),
-              scope: channel.scope,
-              source: MESSAGE_SOURCE,
-              type: MessageType.Get,
-            },
-          }).then(...args);
-        default:
-          return awaitResponse({
-            channel,
-            message: {
-              args,
-              id: generateId(),
-              path,
-              scope: channel.scope,
-              source: MESSAGE_SOURCE,
-              type: MessageType.Call,
-            },
-          });
-      }
+      return awaitResponse({
+        channel,
+        message: {
+          args,
+          id: generateId(),
+          path,
+          scope: channel.scope,
+          source: MESSAGE_SOURCE,
+          type: MessageType.Call,
+        },
+      });
     },
     get(_target, prop, _receiver) {
       switch (true) {
@@ -407,7 +369,7 @@ function decode({
       case isEncodedFunction(value): {
         const proxy = createProxy({
           channel: { ...channel, scope: value.scope },
-          promiseLike: false,
+          promiseLike: value.isPromiseLike,
         });
         registry?.register(proxy, { ...channel, scope: value.scope });
         return proxy;
@@ -426,12 +388,18 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
     switch (typeof value) {
       case "function": {
         const scope = generateId();
+
         createModule({
           export: value,
           from: channel.internal,
           namespace: scope,
         });
-        return { scope, type: "function" };
+
+        return {
+          isPromiseLike: typeof value.then === "function",
+          scope,
+          type: "function",
+        };
       }
       case "undefined":
         return { type: "undefined" };
@@ -441,16 +409,20 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
   });
 }
 
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 11);
-}
-
-function getFunctionWithContext(api: NamedExports, path: ObjectPath): Function {
+function callFunction(
+  api: NamedExports,
+  path: ObjectPath,
+  args: Exportable[]
+): Exportable | Promise<Exportable> {
   const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
 
   return name
-    ? (...args: Exportable[]) => (getIn(api, subpath) as any)[name]?.(...args)
-    : (getIn(api, path) as Function);
+    ? (getIn(api, subpath) as any)[name]?.(...args)
+    : (getIn(api, path) as Function)(...args);
+}
+
+function generateId(): string {
+  return Math.random().toString(36).slice(2, 11);
 }
 
 function isEncodedFunction(value: unknown): value is EncodedFunction {
