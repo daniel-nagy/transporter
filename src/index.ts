@@ -1,19 +1,18 @@
 import { createRegistry } from "./FinalizationRegistry";
 import { safeParse } from "./json";
 import { getIn, isObject, mapValues, ObjectPath } from "./object";
+import type { ObservableLike } from "./Observable";
 
 // Do not assume a specific JavaScript runtime. However, require these global
 // types.
-declare global {
-  type Timeout = unknown;
-  const clearTimeout: (timeout: Timeout) => void;
-  const self: InternalMessageTarget;
-  const setTimeout: (
-    callback: Function,
-    delay?: number,
-    ...args: any[]
-  ) => Timeout;
-}
+declare type Timeout = unknown;
+declare const clearTimeout: (timeout: Timeout) => void;
+declare const self: InternalMessageTarget;
+declare const setTimeout: (
+  callback: Function,
+  delay?: number,
+  ...args: any[]
+) => Timeout;
 
 export const MESSAGE_SOURCE = "transporter";
 
@@ -124,9 +123,10 @@ export type Exported<T extends Exportable> = T extends
 
 export type MessageEvent = { data: string; source: ExternalMessageTarget };
 export type MessageSubscriber = (event: MessageEvent) => void;
+export type NamedExport = ExportableFunction | ObservableLike<Exportable>;
 
 export type NamedExports = {
-  [key: string]: Exportable;
+  [key: string]: NamedExport;
 };
 
 export type Proxied<T> = T extends (...args: infer A) => infer R
@@ -135,11 +135,14 @@ export type Proxied<T> = T extends (...args: infer A) => infer R
     (...args: Exported<A>) => Promisify<Exported<R>>
   : never;
 
-export type RemoteExport<T extends Exportable> = T extends Nothing
-  ? Promise<T>
+export type RemoteExport<T extends NamedExport> = T extends ObservableLike<
+  infer U
+>
+  ? // @ts-expect-error Type 'U' does not satisfy the constraint 'Exportable'.
+    ObservableLike<Exported<U>>
   : T extends ExportableFunction
   ? Proxied<T>
-  : Promise<Exported<T>>;
+  : never;
 
 export type RemoteModule<T extends NamedExports> = {
   [key in keyof T]: RemoteExport<T[key]>;
@@ -442,7 +445,7 @@ function generateId(): string {
   return Math.random().toString(36).slice(2, 11);
 }
 
-function getFunctionWithContext(api: Exportable, path: ObjectPath): Function {
+function getFunctionWithContext(api: NamedExports, path: ObjectPath): Function {
   const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
 
   return name
