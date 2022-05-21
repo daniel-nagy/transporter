@@ -2,7 +2,7 @@
 
 ![](https://img.shields.io/endpoint?url=https%3A%2F%2Fblvd-corp-github-ci-artifacts.s3.amazonaws.com%2FBoulevard%2Ftransporter%2Fworkflows%2Fci%2Fcoverage-shield.json)
 
-Transporter enables inter-process communication using remote method invocation. You can think of Transporter as creating remote, or asynchronous, modules. The Transporter API was influenced by [comlink](https://github.com/GoogleChromeLabs/comlink).
+Transporter enables inter-process communication using remote method invocation. Semantically the Transporter API is used to create remote, or asynchronous, JavaScript modules. The Transporter API was influenced by [comlink](https://github.com/GoogleChromeLabs/comlink).
 
 ![image](https://user-images.githubusercontent.com/1622446/163908100-bb2f24e3-e393-43bf-a656-0e182da41a0e.png)
 
@@ -34,11 +34,11 @@ Our worker code creates a module and exports 2 functions `add` and `subtract`.
 ```typescript
 import { useModule } from "@boulevard/transporter";
 
-const BlvdMath = useModule({ from: new Worker("math.js") });
+const { add, subtract } = useModule({ from: new Worker("math.js") });
 
 const main = async () => {
-  await BlvdMath.add(1, 2);
-  await BlvdMath.subtract(2, 1);
+  await add(1, 2);
+  await subtract(2, 1);
 };
 
 main();
@@ -53,7 +53,7 @@ Our application code requires this module by calling `useModule` on our worker. 
 #### `createModule`
 
 ```typescript
-createModule<T extends Exportable>({
+createModule<T extends ModuleExports>({
   export: T,
   from: InternalMessageTarget = self,
   namespace: Nullable<string> = null
@@ -62,48 +62,56 @@ createModule<T extends Exportable>({
 };
 ```
 
-Create a new module and defined its exports. Exported values must be [`Exportable`](#exportable). The message target is optional and defaults to `self`.
+Create a new module and define its exports. The message target is optional and defaults to `self`. You may provide a namespace to avoid collision with other modules from the same message target. It is recommended to always namespace your modules.
 
-You may provide a namespace to avoid collision with other modules from the same message target. Live exports can be achieved by mutating the properties of an exported object.
+Module exports should be considered final. You can use observables to export values that may change overtime. All exports must be named. Anonymous default exports are not allowed. If an exported value is neither a function nor an observable it will be wrapped in an observable that emits the value and then completes.
 
-Returns a function to release the module so that its exports may be garbage collected. You may reuse the namespace of a released module.
+Returns a function to release the module so that its exports may be garbage collected. You may reuse the namespace of a module after has been released.
 
-##### Example
+##### Examples
 
 ```typescript
-createModule({ export: "❤️" });
-createModule({ export: 8675309 });
+createModule({ export: { default: "❤️" } });
+createModule({ export: { phoneNumber: 8675309 } });
 createModule({ export: { catsAreBetterThanDogs: true } });
 createModule({ export: { movies: ["Ant-Man", "Guardians of the Galaxy", "Captain Marvel"] } })
 createModule({ export: { forEach: (list, callback) => list.forEach(callback) } });
 createModule({ export: { concat: (left, right) => [...left, ...right] }, namespace: "List" });
 createModule({ export: { concat: (left, right) => `${left}${right}`, } namespace: "String" });
 
-const { release } = createModule({ export: "aloha" });
+const { release } = createModule({ export: { default: "aloha" }});
 release();
+```
+
+Live exports can be created using observables.
+
+```typescript
+const darkMode = new BehaviorSubject(false);
+createModule({ export: { darkMode: darkMode.asObservable() } });
+darkMode.next(true);
 ```
 
 #### `useModule`
 
 ```typescript
-useModule<T>({
+useModule<T extends ModuleExports>({
   from: ExternalMessageTarget,
   namespace: Nullable<string> = null,
   origin?: string,
   timeout: number = 1000,
   to: InternalMessageTarget = self
-}): Remote<T>;
+}): RemoteModule<T>;
 ```
 
 Use a remote module from an external message target. The internal message target is optional and defaults to `self`. The namespace should match the namespace of the remote module.
 
-Returns a remote module. Values exported from a remote module are wrapped in a lazy promise. You must request the value to execute the promise. You may execute the promise more than once to get the latest value in the case of live exports. Functions can be passed as values. When you call a remote function the return value will be wrapped in a promise.
+Returns a remote module. A remote module may export functions or observables. Calling a remote function will return a promise.
 
 > You know my fourth rule? Never make a promise you can't keep.
 
-Whenever a response is required an acknowledgement of the request must be received within the allowed time limit. This is handled internally by Transporter. This acknowledgement is independent of the time it takes to fulfill the request. Once the acknowledgement is received there is no time limit to fulfill the request.
+Whenever a response is required Transporter will send a message to the target to validate the connection. The message target must respond within the timeout limit. This validation is independent of the time it takes to fulfill the request. Once the connection is validated there is no time limit to fulfill the request.
 
-##### Example
+##### Examples
 
 ```typescript
 type Auth = {
@@ -123,6 +131,20 @@ const Auth = useModule<Auth>({
 const Crypto = useModule<Crypto>({ from: new Worker("crypto.0beec7b.js") });
 
 const { apiToken } = await Auth.login("chow", await Crypto.encrypt("bologna1"));
+```
+
+You can get the value of an observable imperatively using the `firstValueFrom` function exported by Transporter. It is advised to only use `firstValueFrom` if you are sure the observable will emit a value, otherwise your program may hand indefinitely.
+
+```typescript
+const { definitelyEmits } = useModule({ from: self.parent });
+const value = await firstValueFrom(definitelyEmits);
+```
+
+You can subscribe to an observable to receive new values overtime.
+
+```typescript
+const { darkMode } = useModule({ from: self.parent });
+darkMode.subscribe(onDarkModeChange);
 ```
 
 ### Types
@@ -162,30 +184,30 @@ interface InternalMessageTarget {
 
 An internal message target is any object that can receive message events. The message event must include the source of the message.
 
-#### `Exportable`
+#### `Transportable`
 
 ```typescript
-type Exportable =
-  | undefined
-  | null
+type Transportable =
   | boolean
+  | null
   | number
   | string
-  | Exportable[]
-  | { [key: string]: Exportable }
-  | (...args: Exportable[]): Exportable | Promise<Exportable>
+  | Transportable[]
+  | { [key: string]: Transportable }
+  | (...args: Transported[]): Transportable | Promise<Transportable>
+  | undefined
 ```
 
-An exportable value may be exported from a remote module. If the value is serializable it will be encoded as JSON and reconstructed. If it is not serializable it will be proxied. If the value is a promise then the response will be sent once the promise settles.
+An transportable value may be transported between message targets. If the value is serializable it will be cloned. If it is not serializable it will be proxied. If the return value of a function is a promise then the response will be sent once the promise settles.
 
 #### `RemoteValue`
 
 ```typescript
-type Remote<T> = LazyPromise<T> | Proxied<T>;
+type RemoteValue = RemoteFunction | Observable;
 ```
 
-A remote value is a lazy promise or a proxy.
+A remote value is a function or an observable.
 
 ## Memory Management
 
-If a value cannot be serialized, such as a function, a proxy is created for the value. However, if the proxy is garbage collected this would continue to hold a strong reference to the value, thus creating a memory leak. This module uses `FinalizationRegistry` to receive a notification when a proxy is garbage collected. When a proxy is garbage collected a message is sent to release the value, allowing it to be garbage collected as well.
+If a value cannot be serialized, such as a function, the value is proxied. However, if the proxy is garbage collected this would continue to hold a strong reference to the value, thus creating a memory leak. This module uses `FinalizationRegistry` to receive a notification when a proxy is garbage collected. When a proxy is garbage collected a message is sent to release the value, allowing it to be garbage collected as well.
