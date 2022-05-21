@@ -66,7 +66,7 @@ Create a new module and define its exports. The message target is optional and d
 
 Module exports should be considered final. You can use observables to export values that may change overtime. All exports must be named. Anonymous default exports are not allowed. If an exported value is neither a function nor an observable it will be wrapped in an observable that emits the value and then completes.
 
-Returns a function to release the module so that its exports may be garbage collected. You may reuse the namespace of a module after has been released.
+Returns a function to release the module so that its exports may be garbage collected. You may reuse the namespace of a module after it has been released.
 
 ##### Examples
 
@@ -74,12 +74,22 @@ Returns a function to release the module so that its exports may be garbage coll
 createModule({ export: { default: "❤️" } });
 createModule({ export: { phoneNumber: 8675309 } });
 createModule({ export: { catsAreBetterThanDogs: true } });
-createModule({ export: { movies: ["Ant-Man", "Guardians of the Galaxy", "Captain Marvel"] } })
-createModule({ export: { forEach: (list, callback) => list.forEach(callback) } });
-createModule({ export: { concat: (left, right) => [...left, ...right] }, namespace: "List" });
-createModule({ export: { concat: (left, right) => `${left}${right}`, } namespace: "String" });
+createModule({
+  export: { movies: ["Ant-Man", "Guardians of the Galaxy", "Captain Marvel"] },
+});
+createModule({
+  export: { forEach: (list, callback) => list.forEach(callback) },
+});
+createModule({
+  export: { concat: (left, right) => [...left, ...right] },
+  namespace: "List",
+});
+createModule({
+  export: { concat: (left, right) => `${left}${right}` },
+  namespace: "String",
+});
 
-const { release } = createModule({ export: { default: "aloha" }});
+const { release } = createModule({ export: { default: "aloha" } });
 release();
 ```
 
@@ -133,7 +143,7 @@ const Crypto = useModule<Crypto>({ from: new Worker("crypto.0beec7b.js") });
 const { apiToken } = await Auth.login("chow", await Crypto.encrypt("bologna1"));
 ```
 
-You can get the value of an observable imperatively using the `firstValueFrom` function exported by Transporter. It is advised to only use `firstValueFrom` if you are sure the observable will emit a value, otherwise your program may hand indefinitely.
+You can get the value of an observable imperatively using the `firstValueFrom` function exported by Transporter. It is advised to only use `firstValueFrom` if you are sure the observable will emit a value, otherwise your program may hang indefinitely.
 
 ```typescript
 const { definitelyEmits } = useModule({ from: self.parent });
@@ -198,7 +208,7 @@ type Transportable =
   | undefined
 ```
 
-An transportable value may be transported between message targets. If the value is serializable it will be cloned. If it is not serializable it will be proxied. If the return value of a function is a promise then the response will be sent once the promise settles.
+A transportable value may be transported between message targets. If the value is serializable it will be cloned. If it is not serializable it will be proxied. If the return value of a function is a promise then the response will be sent once the promise settles.
 
 #### `RemoteValue`
 
