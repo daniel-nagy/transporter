@@ -13,6 +13,7 @@ Transporter enables inter-process communication using remote method invocation. 
   - [Functions](#functions)
   - [Types](#types)
 - [Memory Management](#memory-management)
+- [Examples](#examples)
 
 ## Introduction
 
@@ -33,7 +34,6 @@ Our worker code creates a module and exports 2 functions `add` and `subtract`.
 
 ```typescript
 import { useModule } from "@boulevard/transporter";
-
 const { add, subtract } = useModule({ from: new Worker("math.js") });
 
 const main = async () => {
@@ -117,7 +117,7 @@ Use a remote module from an external message target. The internal message target
 
 Returns a remote module. A remote module may export functions or observables. Calling a remote function will return a promise.
 
-> You know my fourth rule? Never make a promise you can't keep.
+> You know my fourth rule? Never make a promise you can't keep. -- Frank
 
 Whenever a response is required Transporter will send a message to the target to validate the connection. The message target must respond within the timeout limit. This validation is independent of the time it takes to fulfill the request. Once the connection is validated there is no time limit to fulfill the request.
 
@@ -221,3 +221,63 @@ A remote value is a function or an observable.
 ## Memory Management
 
 If a value cannot be serialized, such as a function, the value is proxied. However, if the proxy is garbage collected this would continue to hold a strong reference to the value, thus creating a memory leak. This module uses `FinalizationRegistry` to receive a notification when a proxy is garbage collected. When a proxy is garbage collected a message is sent to release the value, allowing it to be garbage collected as well.
+
+## Examples
+
+### Composing React Apps
+
+Transporter can be used to easily compose React applications in different browsing contexts. Here is an example app that has a reusable `<MicroApp />` component that renders a remote React app that exports a `render` method.
+
+```typescript
+import { useModule } from "@boulevard/transporter";
+import { useEffect, useState } from "react";
+import { createRoot } from "react-dom/client";
+
+const MicroApp = <T>({ namespace, src, ...props }: MicroApp.Props<T>) => {
+  const [App, setApp] = useState(null);
+
+  const onLoad = ({ currentTarget: frame }) => {
+    setApp(() => useModule({ from: frame.contentWindow, namespace }));
+  };
+
+  useEffect(() => {
+    App?.render(props);
+  });
+
+  return <iframe onLoad={onLoad} src={src} />;
+};
+
+const App = () => {
+  const [count, setCount] = useState(0);
+
+  return (
+    <MicroApp<CounterProps>
+      count={count}
+      increment={() => setCount((count) => count + 1)}
+      namespace="CounterApp"
+      src="./counter.html"
+    />
+  );
+};
+
+createRoot(document.getElementById("root")).render(<App />);
+```
+
+And here is the implementation of the micro app.
+
+```typescript
+import { createModule } from "@boulevard/transporter";
+import { createRoot } from "react-dom/client";
+
+const App = ({ count, increment }) => (
+  <>
+    <div>current count: {count}</div>
+    <button onClick={() => increment()}>increment</button>
+  </>
+);
+
+const Root = createRoot(document.getElementById("root"));
+const render = (props) => Root.render(<App {...props} />);
+
+createModule({ export: { render }, namespace: "CounterApp" });
+```
