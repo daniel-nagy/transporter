@@ -13,7 +13,7 @@ Transporter enables inter-process communication using remote method invocation. 
   - [Functions](#functions)
   - [Types](#types)
 - [Memory Management](#memory-management)
-- [Examples](#examples)
+- [Examples](#examples-2)
 
 ## Introduction
 
@@ -117,7 +117,7 @@ Use a remote module from an external message target. The internal message target
 
 Returns a remote module. A remote module may export functions or observables. Calling a remote function will return a promise.
 
-> You know my fourth rule? Never make a promise you can't keep. -- Frank
+> You know my fourth rule? Never make a promise you can't keep. — Frank
 
 Whenever a response is required Transporter will send a message to the target to validate the connection. The message target must respond within the timeout limit. This validation is independent of the time it takes to fulfill the request. Once the connection is validated there is no time limit to fulfill the request.
 
@@ -263,6 +263,8 @@ const App = () => {
 createRoot(document.getElementById("root")).render(<App />);
 ```
 
+Notice that we called `setApp` with a function that returns our module. Otherwise React would attempt tp call our module as a function.
+
 And here is the implementation of the micro app.
 
 ```typescript
@@ -281,3 +283,5 @@ const render = (props) => Root.render(<App {...props} />);
 
 createModule({ export: { render }, namespace: "CounterApp" });
 ```
+
+Notice that provide an inline function to `onClick` that calls `increment` with no arguments. Otherwise the click event would be passed to `increment` which is not transportable.
