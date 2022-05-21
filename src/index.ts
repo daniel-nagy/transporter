@@ -1,7 +1,7 @@
 import { createRegistry } from "./FinalizationRegistry";
 import { safeParse } from "./json";
-import { getIn, isObject, mapValues, ObjectPath } from "./object";
-import type { ObservableLike } from "./Observable";
+import { getIn, isObject, mapOwnProps, mapValues, ObjectPath } from "./object";
+import { Observable, ObservableLike } from "./Observable";
 
 // Do not assume a specific JavaScript runtime. However, require these global
 // types.
@@ -42,14 +42,14 @@ interface IMessage {
 }
 
 interface ICallFunctionMessage extends IMessage {
-  readonly args: Exportable[];
+  readonly args: Transportable[];
   readonly path: ObjectPath;
   readonly type: MessageType.Call;
 }
 
 interface IErrorMessage extends IMessage {
+  readonly error: Transportable;
   readonly type: MessageType.Error;
-  readonly error: Exportable;
 }
 
 interface IGarbageCollectMessage extends IMessage {
@@ -66,7 +66,7 @@ interface IPongMessage extends IMessage {
 
 interface ISetValueMessage extends IMessage {
   readonly type: MessageType.Set;
-  readonly value: Exportable;
+  readonly value: Transportable;
 }
 
 type Channel = {
@@ -78,7 +78,6 @@ type Channel = {
 };
 
 type EncodedFunction = {
-  isPromiseLike: boolean;
   scope: string;
   type: "function";
 };
@@ -93,57 +92,54 @@ type Message =
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 
-export type Exportable =
+export type MessageEvent = { data: string; source: ExternalMessageTarget };
+export type MessageSubscriber = (event: MessageEvent) => void;
+export type ModuleExport = Transportable | ObservableLike<Transportable>;
+export type ModuleExports = { [name: string]: ModuleExport };
+
+export type RemoteFunction<T> = T extends (...args: infer A) => infer R
+  ? // @ts-expect-error Type 'R' does not satisfy the constraint 'Transportable'.
+    (...args: A /* Transportable[] */) => Promisify<Transported<R>>
+  : never;
+
+export type RemoteValue<T extends ModuleExport> = T extends ObservableLike<
+  infer U
+>
+  ? // @ts-expect-error Type 'U' does not satisfy the constraint 'Transportable'.
+    ObservableLike<Transported<U>>
+  : T extends TransportableFunction
+  ? RemoteFunction<T>
+  : // @ts-expect-error Type 'T' does not satisfy the constraint 'Transportable'.
+    ObservableLike<Transported<T>>;
+
+export type RemoteModule<T extends ModuleExports> = {
+  [key in keyof T]: RemoteValue<T[key]>;
+};
+
+export type Transportable =
   | boolean
   | null
   | number
   | string
-  | void
-  | Exportable[]
-  | ExportableFunction
-  | ExportableObject;
+  | Transportable[]
+  | TransportableFunction
+  | TransportableObject
+  | void;
 
-export type ExportableFunction = (
-  ...args: any[] // Exportable[]
-) => Exportable | Promise<Exportable>;
+export type TransportableFunction = (
+  ...args: any[] // Transported[]
+) => Transportable | Promise<Transportable>;
 
-export type ExportableObject = { [key: string]: Exportable };
+export type TransportableObject = { [key: string]: Transportable };
 
-export type Exported<T extends Exportable> = T extends
-  | Exportable[]
-  | ExportableObject
-  ? // @ts-expect-error Type 'T[key]' does not satisfy the constraint 'Exportable'.
-    { [key in keyof T]: Exported<T[key]> }
-  : T extends ExportableFunction
-  ? Proxied<T>
+export type Transported<T extends Transportable> = T extends
+  | Transportable[]
+  | TransportableObject
+  ? // @ts-expect-error Type 'T[key]' does not satisfy the constraint 'Transportable'.
+    { [key in keyof T]: Transported<T[key]> }
+  : T extends TransportableFunction
+  ? RemoteFunction<T>
   : T;
-
-export type MessageEvent = { data: string; source: ExternalMessageTarget };
-export type MessageSubscriber = (event: MessageEvent) => void;
-export type NamedExport = ExportableFunction | ObservableLike<Exportable>;
-
-export type NamedExports = {
-  [key: string]: NamedExport;
-};
-
-export type Proxied<T> = T extends (...args: infer A) => infer R
-  ? // @ts-expect-error Type 'A' does not satisfy the constraint 'Exportable'.
-    //                  Type 'R' does not satisfy the constraint 'Exportable'.
-    (...args: Exported<A>) => Promisify<Exported<R>>
-  : never;
-
-export type RemoteExport<T extends NamedExport> = T extends ObservableLike<
-  infer U
->
-  ? // @ts-expect-error Type 'U' does not satisfy the constraint 'Exportable'.
-    ObservableLike<Exported<U>>
-  : T extends ExportableFunction
-  ? Proxied<T>
-  : never;
-
-export type RemoteModule<T extends NamedExports> = {
-  [key in keyof T]: RemoteExport<T[key]>;
-};
 
 export class TimeoutError extends Error {
   readonly name = "TimeoutError";
@@ -170,7 +166,7 @@ const registry = createRegistry<Channel>((channel) => {
   );
 });
 
-export function createModule<T extends NamedExports>({
+export function createModule<T extends ModuleExports>({
   export: api,
   from: internal = self,
   namespace: scope = null,
@@ -179,6 +175,17 @@ export function createModule<T extends NamedExports>({
   from?: InternalMessageTarget;
   namespace?: string | null;
 }): { release(): void } {
+  const _exports = mapOwnProps(api, (value) => {
+    switch (true) {
+      case isFunction(value):
+        return value;
+      case isObservableLike(value):
+        return value;
+      default:
+        return Observable.of(value);
+    }
+  });
+
   const release = () => internal.removeEventListener("message", onMessage);
 
   async function onMessage(event: MessageEvent) {
@@ -200,7 +207,7 @@ export function createModule<T extends NamedExports>({
                 scope,
                 source: MESSAGE_SOURCE,
                 type: MessageType.Set,
-                value: await callFunction(api, message.path, message.args),
+                value: await callFunction(_exports, message.path, message.args),
               },
             })
           );
@@ -213,7 +220,7 @@ export function createModule<T extends NamedExports>({
                 scope,
                 source: MESSAGE_SOURCE,
                 type: MessageType.Error,
-                error: exception as Exportable,
+                error: exception as Transportable,
               },
             })
           );
@@ -245,7 +252,7 @@ export function createModule<T extends NamedExports>({
   return { release };
 }
 
-export function useModule<T extends NamedExports>({
+export function useModule<T extends ModuleExports>({
   from: external,
   namespace: scope = null,
   origin,
@@ -263,7 +270,7 @@ export function useModule<T extends NamedExports>({
   });
 }
 
-function awaitResponse<T extends Exportable>({
+function awaitResponse<T extends Transportable>({
   channel,
   message,
 }: {
@@ -273,7 +280,7 @@ function awaitResponse<T extends Exportable>({
   return new Promise<T>((resolve, reject) => {
     const { id, scope } = message;
     const { cancel: cancelTimeout } = schedule(channel.timeout, () =>
-      reject(new TimeoutError("A signal was not received in the allowed time."))
+      reject(new TimeoutError("Connection timeout."))
     );
 
     channel.internal.addEventListener("message", function onMessage(event) {
@@ -315,7 +322,7 @@ function awaitResponse<T extends Exportable>({
   });
 }
 
-function createProxy<T extends NamedExports>({
+function createProxy<T extends ModuleExports>({
   channel,
   path = [],
   promiseLike = false,
@@ -343,6 +350,7 @@ function createProxy<T extends NamedExports>({
         case typeof prop === "symbol":
           return undefined;
         case prop === "then" && !promiseLike:
+          // Prevents promise chaining when the proxy is wrapped in a promise.
           return undefined;
         default:
           return createProxy({ channel, path: [...path, prop as string] });
@@ -369,8 +377,7 @@ function decode({
       case isEncodedFunction(value): {
         const proxy = createProxy({
           channel: { ...channel, scope: value.scope },
-          promiseLike: value.isPromiseLike,
-        });
+        }).default;
         registry?.register(proxy, { ...channel, scope: value.scope });
         return proxy;
       }
@@ -390,16 +397,12 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
         const scope = generateId();
 
         createModule({
-          export: value,
+          export: { default: value },
           from: channel.internal,
           namespace: scope,
         });
 
-        return {
-          isPromiseLike: typeof value.then === "function",
-          scope,
-          type: "function",
-        };
+        return { scope, type: "function" };
       }
       case "undefined":
         return { type: "undefined" };
@@ -410,15 +413,15 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
 }
 
 function callFunction(
-  api: NamedExports,
+  from: ModuleExports,
   path: ObjectPath,
-  args: Exportable[]
-): Exportable | Promise<Exportable> {
+  args: Transportable[]
+): Transportable | Promise<Transportable> {
   const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
 
   return name
-    ? (getIn(api, subpath) as any)[name]?.(...args)
-    : (getIn(api, path) as Function)(...args);
+    ? (getIn(from, subpath) as any)[name]?.(...args)
+    : (getIn(from, path) as Function)(...args);
 }
 
 function generateId(): string {
@@ -433,8 +436,16 @@ function isEncodedUndefined(value: unknown): value is EncodedUndefined {
   return isObject(value) && value.type === "undefined";
 }
 
+function isFunction(value: unknown): value is Function {
+  return typeof value === "function";
+}
+
 function isMessage(message: unknown): message is Message {
   return isObject(message) && message.source === MESSAGE_SOURCE;
+}
+
+function isObservableLike(value: unknown): value is ObservableLike<any> {
+  return isObject(value) && isFunction(value.subscribe);
 }
 
 function schedule(time: number, callback: () => void): { cancel(): void } {

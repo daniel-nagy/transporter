@@ -3,12 +3,17 @@ import {
   ExternalMessageTarget,
   InternalMessageTarget,
   MessageSubscriber,
-  NamedExport,
-  RemoteExport,
+  ModuleExport,
+  RemoteValue,
   TimeoutError,
   useModule,
 } from "./index";
-import { firstValueFrom, Observable, ObservableLike } from "./Observable";
+import {
+  BehaviorSubject,
+  firstValueFrom,
+  Observable,
+  ObservableLike,
+} from "./Observable";
 
 declare namespace globalThis {
   const gc: () => void;
@@ -61,10 +66,10 @@ const createMessageChannel = () => {
   return [withSource(t1, t2), withSource(t2, t1)];
 };
 
-const exportValue = <T extends NamedExport>(
+const exportValue = <T extends ModuleExport>(
   value: T,
   { namespace = null }: { namespace?: string | null } = {}
-): { proxy: RemoteExport<T>; release(): void } => {
+): { proxy: RemoteValue<T>; release(): void } => {
   const [t1, t2] = createMessageChannel();
 
   const { release } = createModule({
@@ -87,27 +92,27 @@ const scheduleTask = <R>(callback?: () => R) =>
 
 describe("transporter", () => {
   test("exporting an observable of type undefined", async () => {
-    const { proxy } = exportValue(Observable.of(undefined as undefined));
+    const { proxy } = exportValue(undefined as undefined);
     expect(await firstValueFrom(proxy)).toEqual(undefined);
   });
 
   test("exporting an observable of type number", async () => {
-    const { proxy } = exportValue(Observable.of(1));
+    const { proxy } = exportValue(1);
     expect(await firstValueFrom(proxy)).toEqual(1);
   });
 
   test("exporting an observable of type boolean", async () => {
-    const { proxy } = exportValue(Observable.of(true));
+    const { proxy } = exportValue(true);
     expect(await firstValueFrom(proxy)).toEqual(true);
   });
 
   test("exporting an observable of type string", async () => {
-    const { proxy } = exportValue(Observable.of("🥸"));
+    const { proxy } = exportValue("🥸");
     expect(await firstValueFrom(proxy)).toEqual("🥸");
   });
 
   test("exporting an observable of type null", async () => {
-    const { proxy } = exportValue(Observable.of(null as null));
+    const { proxy } = exportValue(null as null);
     expect(await firstValueFrom(proxy)).toEqual(null);
   });
 
@@ -120,78 +125,76 @@ describe("transporter", () => {
   });
 
   test("exporting an observable of type object", async () => {
-    const { proxy } = exportValue(Observable.of({}));
+    const { proxy } = exportValue({});
     expect(await firstValueFrom(proxy)).toEqual({});
   });
 
   test("exporting an observable of type array", async () => {
-    const { proxy } = exportValue(Observable.of([]));
+    const { proxy } = exportValue([]);
     expect(await firstValueFrom(proxy)).toEqual([]);
   });
 
   test("exporting an observable of type object with a property of type undefined", async () => {
-    const { proxy } = exportValue(
-      Observable.of({ prop: undefined as undefined })
-    );
+    const { proxy } = exportValue({ prop: undefined as undefined });
     expect(await firstValueFrom(proxy)).toEqual({ prop: undefined });
   });
 
   test("exporting an observable of type object with a property of type number", async () => {
-    const { proxy } = exportValue(Observable.of({ prop: 12 }));
+    const { proxy } = exportValue({ prop: 12 });
     expect(await firstValueFrom(proxy)).toEqual({ prop: 12 });
   });
 
   test("exporting an observable of type object with a property of type boolean", async () => {
-    const { proxy } = exportValue(Observable.of({ prop: false }));
+    const { proxy } = exportValue({ prop: false });
     expect(await firstValueFrom(proxy)).toEqual({ prop: false });
   });
 
   test("exporting an observable of type object with a property of type string", async () => {
-    const { proxy } = exportValue(Observable.of({ prop: "🥸" }));
+    const { proxy } = exportValue({ prop: "🥸" });
     expect(await firstValueFrom(proxy)).toEqual({ prop: "🥸" });
   });
 
   test("exporting an observable of type object with a property of type null", async () => {
-    const { proxy } = exportValue(Observable.of({ prop: null as null }));
+    const { proxy } = exportValue({ prop: null as null });
     expect(await firstValueFrom(proxy)).toEqual({ prop: null });
   });
 
   test("exporting an observable of type object with a property of type function", async () => {
     const value = jest.fn();
-    const { proxy } = exportValue(Observable.of({ prop: value }));
+    const { proxy } = exportValue({ prop: value });
     (await firstValueFrom(proxy)).prop();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
   });
 
   test("exporting an observable of type array with an item of type undefined", async () => {
-    const { proxy } = exportValue(Observable.of([undefined as undefined]));
+    const { proxy } = exportValue([undefined as undefined]);
     expect(await firstValueFrom(proxy)).toEqual([undefined]);
   });
 
   test("exporting an observable of type array with an item of type number", async () => {
-    const { proxy } = exportValue(Observable.of([23]));
+    const { proxy } = exportValue([23]);
     expect(await firstValueFrom(proxy)).toEqual([23]);
   });
 
   test("exporting an observable of type array with an item of type boolean", async () => {
-    const { proxy } = exportValue(Observable.of([true]));
+    const { proxy } = exportValue([true]);
     expect(await firstValueFrom(proxy)).toEqual([true]);
   });
 
   test("exporting an observable of type array with an item of type string", async () => {
-    const { proxy } = exportValue(Observable.of(["🥸"]));
+    const { proxy } = exportValue(["🥸"]);
     expect(await firstValueFrom(proxy)).toEqual(["🥸"]);
   });
 
   test("exporting an observable of type array with an item of type null", async () => {
-    const { proxy } = exportValue(Observable.of([null as null]));
+    const { proxy } = exportValue([null as null]);
     expect(await firstValueFrom(proxy)).toEqual([null]);
   });
 
   test("exporting an observable of type array with an item of type function", async () => {
     const value = jest.fn();
-    const { proxy } = exportValue(Observable.of([value]));
+    const { proxy } = exportValue([value]);
     (await firstValueFrom(proxy))[0]();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
@@ -201,17 +204,15 @@ describe("transporter", () => {
     const ab = jest.fn();
     const db2a = jest.fn();
 
-    const { proxy } = exportValue(
-      Observable.of({
-        a: { aa: null as null, ab },
-        b: "🥸",
-        c: 3,
-        d: {
-          da: undefined as undefined,
-          db: [24, true, { db2a }],
-        },
-      })
-    );
+    const { proxy } = exportValue({
+      a: { aa: null as null, ab },
+      b: "🥸",
+      c: 3,
+      d: {
+        da: undefined as undefined,
+        db: [24, true, { db2a }],
+      },
+    });
 
     const value = await firstValueFrom(proxy);
 
@@ -232,15 +233,30 @@ describe("transporter", () => {
     expect(db2a).toHaveBeenCalledWith();
   });
 
+  test("explicitly exporting an observable", async () => {
+    const { proxy } = exportValue(Observable.of(42));
+    expect(await firstValueFrom(proxy)).toEqual(42);
+  });
+
+  test("subscribing to an exported observable that emits values overtime", async () => {
+    const subject = new BehaviorSubject(1);
+    const { proxy } = exportValue(subject.asObservable());
+    const next = jest.fn();
+
+    proxy.subscribe(next);
+    subject.next(2);
+    await scheduleTask(() => subject.next(3));
+    expect(next).toHaveBeenCalledTimes(3);
+    expect(next).toHaveBeenCalledWith(1);
+    expect(next).toHaveBeenCalledWith(2);
+    expect(next).toHaveBeenCalledWith(3);
+  });
+
   test("destructuring named exports", async () => {
     const [t1, t2] = createMessageChannel();
 
     createModule({
-      export: {
-        a: Observable.of("a"),
-        b: Observable.of("b"),
-        c: () => "c",
-      },
+      export: { a: "a", b: "b", c: () => "c" },
       from: t1,
     });
 
@@ -264,11 +280,7 @@ describe("transporter", () => {
     const [t1, t2] = createMessageChannel();
 
     createModule({
-      export: {
-        a: Observable.of("a"),
-        b: Observable.of("b"),
-        c: () => "c",
-      },
+      export: { a: "a", b: "b", c: () => "c" },
       from: t1,
     });
 
@@ -502,8 +514,8 @@ describe("transporter", () => {
   });
 
   test("namespaced module exports", async () => {
-    const { proxy: A } = exportValue(Observable.of("a"), { namespace: "A" });
-    const { proxy: B } = exportValue(Observable.of("b"), { namespace: "B" });
+    const { proxy: A } = exportValue("a", { namespace: "A" });
+    const { proxy: B } = exportValue("b", { namespace: "B" });
 
     expect(await firstValueFrom(A)).toEqual("a");
     expect(await firstValueFrom(B)).toEqual("b");
@@ -512,8 +524,8 @@ describe("transporter", () => {
   test("bidirectional modules", async () => {
     const [t1, t2] = createMessageChannel();
 
-    createModule({ export: { default: Observable.of("a") }, from: t1 });
-    createModule({ export: { default: Observable.of("b") }, from: t2 });
+    createModule({ export: { default: "a" }, from: t1 });
+    createModule({ export: { default: "b" }, from: t2 });
 
     const A = useModule<{ default: ObservableLike<"a"> }>({ from: t1, to: t2 });
     const B = useModule<{ default: ObservableLike<"b"> }>({ from: t2, to: t1 });
@@ -527,7 +539,7 @@ describe("transporter", () => {
     const spy = jest.spyOn(t2, "postMessage");
 
     createModule({
-      export: { default: Observable.of("a") },
+      export: { default: "a" },
       from: t1,
       namespace: "A",
     });
@@ -566,7 +578,6 @@ describe("transporter", () => {
       type: "set",
       value: {
         unsubscribe: {
-          isPromiseLike: false,
           scope: expect.stringMatching(/[\da-z]{9}/),
           type: "function",
         },

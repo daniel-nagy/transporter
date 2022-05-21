@@ -41,7 +41,7 @@ export class Observable<T> implements ObservableLike<T> {
 
   static of<T>(...values: [T, ...T[]]) {
     return new Observable<T>((observer) => {
-      values.forEach(observer.next);
+      values.forEach((value) => observer.next(value));
       observer.complete();
     });
   }

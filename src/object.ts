@@ -10,6 +10,16 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
 }
 
+export function mapOwnProps<T>(value: T, callback: (value: any) => any): any {
+  return Object.entries(value).reduce(
+    (acc, [key, value]) => ({
+      ...acc,
+      [key]: callback(value),
+    }),
+    {}
+  );
+}
+
 export function mapValues<T>(value: T, callback: (value: any) => any): any {
   if (Array.isArray(value))
     return callback(value.map((item) => mapValues(item, callback)));
