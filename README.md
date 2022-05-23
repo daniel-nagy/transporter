@@ -25,7 +25,9 @@ Without further ado let's look at an example. Suppose we have a worker that cont
 import { createModule } from "@boulevard/transporter";
 
 const add = (...values) => values.reduce((sum, num) => sum + num, 0);
-const subtract = (...values) => values.reduce((diff, num) => diff - num, 0);
+
+const subtract = (value, ...values) =>
+  values.reduce((diff, num) => diff - num, value);
 
 createModule({ export: { add, subtract } });
 ```
@@ -34,7 +36,10 @@ Our worker code creates a module and exports 2 functions `add` and `subtract`.
 
 ```typescript
 import { useModule } from "@boulevard/transporter";
-const { add, subtract } = useModule({ from: new Worker("math.js") });
+
+const { add, subtract } = useModule({
+  from: new Worker("math.js", { type: "module" }),
+});
 
 const main = async () => {
   await add(1, 2);
@@ -55,14 +60,15 @@ Our application code requires this module by calling `useModule` on our worker. 
 ```typescript
 createModule<T extends ModuleExports>({
   export: T,
-  from: InternalMessageTarget = self,
-  namespace: Nullable<string> = null
+  namespace: Nullable<string> = null,
+  timeout: number = 1000,
+  within: ModuleContainer = defaultModuleContainer
 }): {
   release(): void
 };
 ```
 
-Create a new module and define its exports. The message target is optional and defaults to `self`. You may provide a namespace to avoid collision with other modules from the same message target. It is recommended to always namespace your modules.
+Create a new module and define its exports. Modules exist within a container. See the [`ModuleContainer`](#modulecontainer) type for more info. You may provide a namespace to avoid collision with other modules from the same message target. It is recommended to always namespace your modules.
 
 Module exports should be considered final. You can use observables to export values that may change overtime. All exports must be named. Anonymous default exports are not allowed. If an exported value is neither a function nor an observable it will be wrapped in an observable that emits the value and then completes.
 
@@ -105,15 +111,13 @@ darkMode.next(true);
 
 ```typescript
 useModule<T extends ModuleExports>({
-  from: ExternalMessageTarget,
+  from: MessagePortLike,
   namespace: Nullable<string> = null,
-  origin?: string,
-  timeout: number = 1000,
-  to: InternalMessageTarget = self
+  timeout: number = 1000
 }): RemoteModule<T>;
 ```
 
-Use a remote module from an external message target. The internal message target is optional and defaults to `self`. The namespace should match the namespace of the remote module.
+Use a remote module connected via a message channel. The namespace should match the namespace of the remote module.
 
 Returns a remote module. A remote module may export functions or observables. Calling a remote function will return a promise.
 
@@ -133,9 +137,11 @@ type Crypto = {
 };
 
 const Auth = useModule<Auth>({
-  from: self.parent,
+  from: browserConnection({
+    origin: "https://trusted.com",
+    window: self.parent,
+  }),
   namespace: "Auth",
-  origin: "https://trusted.com",
 });
 
 const Crypto = useModule<Crypto>({ from: new Worker("crypto.0beec7b.js") });
@@ -146,53 +152,74 @@ const { apiToken } = await Auth.login("chow", await Crypto.encrypt("bologna1"));
 You can get the value of an observable imperatively using the `firstValueFrom` function exported by Transporter. It is advised to only use `firstValueFrom` if you are sure the observable will emit a value, otherwise your program may hang indefinitely.
 
 ```typescript
-const { definitelyEmits } = useModule({ from: self.parent });
+const { definitelyEmits } = useModule({ from: browserConnection(self.parent) });
 const value = await firstValueFrom(definitelyEmits);
 ```
 
 You can subscribe to an observable to receive new values overtime.
 
 ```typescript
-const { darkMode } = useModule({ from: self.parent });
+const { darkMode } = useModule({ from: browserConnection(self.parent) });
 darkMode.subscribe(onDarkModeChange);
 ```
 
 ### Types
 
-#### `ExternalMessageTarget`
+#### `MessagePortLike`
 
 ```typescript
-interface ExternalMessageTarget {
-  postMessage(message: string, origin?: string): void;
-}
+type MessagePortLike = {
+  addEventListener(type: "message", listener: MessageSubscriber): void;
+  postMessage(message: string): void;
+  removeEventListener(type: "message", listener: MessageSubscriber): void;
+};
 ```
 
-An external message target is any object with a `postMessage` method that supports a single argument of type `string`.
+A message port is a private connection between 2 message targets. Because the connection is private the source of the message is implied.
 
 Internally Transporter will serialize and deserialize all transported values to and from JSON. While some message targets can send and receive types other than `string`, using strings enables interop with more systems. At the moment this is opaque but it would be possible to add an API to intercept messages and provide custom logic.
+
+#### `ModuleContainer`
+
+```typescript
+type ModuleContainer = (
+  createConnection: (port: MessagePortLike) => void
+) => void;
+```
+
+A module container is responsible for creating a private connection between 2 message targets. This allows Transporter to be agnostic of how the message port is created. Transport cannot possibly know how to connect to every type of message channel.
+
+Transporter provides some useful containers for things like browser windows and Web workers. However, it is possible to create your own module containers. For example, an HTTP container, a Websocket container, a React Native Webview container, etc.
+
+Every module exists within a module container. If you don't specify a container then the module will be placed in a default module container. The default module container treats the global scope as a message port. Because the global scope of a dedicated Web worker behaves like a message port you do not need to specify a module container for Web workers.
 
 ##### Example
 
 ```typescript
-const Native = useModule({ from: window.ReactNativeWebView });
+createModule({ export: { default: "👾" }, within: browserContainer() });
+createModule({ export: { default: "🛸" }, within: sharedWorkerContainer() });
+
+// Not included with Transporter...yet
+createModule({
+  export: { default: "⚛️" },
+  within: reactNativeWebviewContainer(),
+});
 ```
 
-#### `InternalMessageTarget`
+The built in module containers allow you to intercept the connection before it is created. This could be useful for proxying the message port or rejecting connections from an unknown origin. To prevent the connection from being created return `null` from the `createConnection` function.
 
 ```typescript
-interface InternalMessageTarget {
-  addEventListener(
-    type: "message",
-    listener: (event: { data: string; source: ExternalMessageTarget }) => void
-  ): void;
-  removeEventListener(
-    type: "message",
-    listener: (event: { data: string; source: ExternalMessageTarget }) => void
-  ): void;
-}
+createModule({
+  export: { default: "👾" },
+  within: browserContainer({
+    createConnection({ delegate, origin }) {
+      return new URL(origin).hostname.endsWith("trusted.com")
+        ? delegate()
+        : null;
+    },
+  }),
+});
 ```
-
-An internal message target is any object that can receive message events. The message event must include the source of the message.
 
 #### `Transportable`
 
@@ -230,6 +257,7 @@ Transporter can be used to easily compose React applications in different browsi
 
 ```typescript
 import { useModule } from "@boulevard/transporter";
+import { browserConnection } from "@boulevard/transporter/browserContainer";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
@@ -237,7 +265,12 @@ const MicroApp = <T>({ namespace, src, ...props }: MicroApp.Props<T>) => {
   const [App, setApp] = useState(null);
 
   const onLoad = ({ currentTarget: frame }) => {
-    setApp(() => useModule({ from: frame.contentWindow, namespace }));
+    setApp(() =>
+      useModule({
+        from: browserConnection(frame.contentWindow),
+        namespace,
+      })
+    );
   };
 
   useEffect(() => {
@@ -263,12 +296,13 @@ const App = () => {
 createRoot(document.getElementById("root")).render(<App />);
 ```
 
-Notice that we called `setApp` with a function that returns our module. Otherwise React would attempt tp call our module as a function.
+Notice that we called `setApp` with a function that returns our module. Otherwise React would attempt to call our module as a function.
 
 And here is the implementation of the micro app.
 
 ```typescript
 import { createModule } from "@boulevard/transporter";
+import { browserContainer } from "@boulevard/transporter/browserContainer";
 import { createRoot } from "react-dom/client";
 
 const App = ({ count, increment }) => (
@@ -281,7 +315,11 @@ const App = ({ count, increment }) => (
 const Root = createRoot(document.getElementById("root"));
 const render = (props) => Root.render(<App {...props} />);
 
-createModule({ export: { render }, namespace: "CounterApp" });
+createModule({
+  export: { render },
+  namespace: "CounterApp",
+  within: browserContainer(),
+});
 ```
 
-Notice that provide an inline function to `onClick` that calls `increment` with no arguments. Otherwise the click event would be passed to `increment` which is not transportable.
+Notice that we provide an inline function to `onClick` that calls `increment` with no arguments. Otherwise the click event would be passed to `increment` which is not transportable.

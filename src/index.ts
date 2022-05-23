@@ -272,7 +272,6 @@ export function useModule<T extends ModuleExports>({
 }: {
   from: MessagePortLike;
   namespace?: string | null;
-  origin?: string;
   timeout?: number;
 }): RemoteModule<T> {
   return createProxy({ channel: { port, scope, timeout } });
