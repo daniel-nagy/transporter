@@ -7,7 +7,7 @@ import { Observable, ObservableLike } from "./Observable";
 // types.
 declare type Timeout = unknown;
 declare const clearTimeout: (timeout: Timeout) => void;
-declare const self: InternalMessageTarget;
+declare const self: MessagePortLike;
 declare const setTimeout: (
   callback: Function,
   delay?: number,
@@ -15,15 +15,6 @@ declare const setTimeout: (
 ) => Timeout;
 
 export const MESSAGE_SOURCE = "transporter";
-
-export interface ExternalMessageTarget {
-  postMessage(message: string, targetOrigin?: string): void;
-}
-
-export interface InternalMessageTarget {
-  addEventListener(type: "message", listener: MessageSubscriber): void;
-  removeEventListener(type: "message", listener: MessageSubscriber): void;
-}
 
 enum MessageType {
   Call = "call",
@@ -70,9 +61,7 @@ interface ISetValueMessage extends IMessage {
 }
 
 type Channel = {
-  readonly external: ExternalMessageTarget;
-  readonly internal: InternalMessageTarget;
-  readonly origin?: string;
+  readonly port: MessagePortLike;
   readonly scope: string | null;
   readonly timeout: number;
 };
@@ -92,8 +81,20 @@ type Message =
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 
-export type MessageEvent = { data: string; source: ExternalMessageTarget };
+export type MessageEvent = { data: string };
+
+export type MessagePortLike = {
+  addEventListener(type: "message", listener: MessageSubscriber): void;
+  postMessage(message: string): void;
+  removeEventListener(type: "message", listener: MessageSubscriber): void;
+};
+
 export type MessageSubscriber = (event: MessageEvent) => void;
+
+export type ModuleContainer = (
+  createConnection: (port: MessagePortLike) => void
+) => void;
+
 export type ModuleExport = Transportable | ObservableLike<Transportable>;
 export type ModuleExports = { [name: string]: ModuleExport };
 
@@ -153,7 +154,7 @@ export class TimeoutError extends Error {
 }
 
 const registry = createRegistry<Channel>((channel) => {
-  channel.external.postMessage(
+  channel.port.postMessage(
     encode({
       channel,
       message: {
@@ -168,12 +169,14 @@ const registry = createRegistry<Channel>((channel) => {
 
 export function createModule<T extends ModuleExports>({
   export: api,
-  from: internal = self,
   namespace: scope = null,
+  timeout = 1000,
+  within: container = (createConnection) => createConnection(self),
 }: {
   export: T;
-  from?: InternalMessageTarget;
   namespace?: string | null;
+  timeout?: number;
+  within?: ModuleContainer;
 }): { release(): void } {
   const _exports = mapOwnProps(api, (value) => {
     switch (true) {
@@ -186,88 +189,93 @@ export function createModule<T extends ModuleExports>({
     }
   });
 
-  const release = () => internal.removeEventListener("message", onMessage);
+  const portSubscriptions: (() => void)[] = [];
+  const releaseAll = () => portSubscriptions.forEach((release) => release());
 
-  async function onMessage(event: MessageEvent) {
-    const data = safeParse(event.data);
+  container((port) => {
+    const channel = { port, scope, timeout };
+    const release = () => port.removeEventListener("message", onMessage);
 
-    if (!isMessage(data) || data.scope !== scope) return;
+    async function onMessage(event: MessageEvent) {
+      const data = safeParse(event.data);
 
-    const channel = { external: event.source, internal, scope, timeout: 0 };
-    const message = decode({ channel, message: data });
+      if (!isMessage(data) || data.scope !== scope) return;
 
-    switch (message.type) {
-      case MessageType.Call:
-        try {
-          event.source.postMessage(
+      const message = decode({ channel, message: data });
+
+      switch (message.type) {
+        case MessageType.Call:
+          try {
+            port.postMessage(
+              encode({
+                channel,
+                message: {
+                  id: message.id,
+                  scope,
+                  source: MESSAGE_SOURCE,
+                  type: MessageType.Set,
+                  value: await callFunction(
+                    _exports,
+                    message.path,
+                    message.args
+                  ),
+                },
+              })
+            );
+          } catch (exception) {
+            port.postMessage(
+              encode({
+                channel,
+                message: {
+                  id: message.id,
+                  scope,
+                  source: MESSAGE_SOURCE,
+                  type: MessageType.Error,
+                  error: exception as Transportable,
+                },
+              })
+            );
+          }
+          break;
+        case MessageType.GarbageCollect:
+          release();
+          break;
+        case MessageType.Ping:
+          port.postMessage(
             encode({
               channel,
               message: {
                 id: message.id,
                 scope,
                 source: MESSAGE_SOURCE,
-                type: MessageType.Set,
-                value: await callFunction(_exports, message.path, message.args),
+                type: MessageType.Pong,
               },
             })
           );
-        } catch (exception) {
-          event.source.postMessage(
-            encode({
-              channel,
-              message: {
-                id: message.id,
-                scope,
-                source: MESSAGE_SOURCE,
-                type: MessageType.Error,
-                error: exception as Transportable,
-              },
-            })
-          );
-        }
-        break;
-      case MessageType.GarbageCollect:
-        release();
-        break;
-      case MessageType.Ping:
-        event.source.postMessage(
-          encode({
-            channel,
-            message: {
-              id: message.id,
-              scope,
-              source: MESSAGE_SOURCE,
-              type: MessageType.Pong,
-            },
-          })
-        );
-        break;
-      default:
-      // no default
+          break;
+        default:
+        // no default
+      }
     }
-  }
 
-  internal.addEventListener("message", onMessage);
+    port.addEventListener("message", onMessage);
+    portSubscriptions.push(release);
+  });
 
-  return { release };
+  return { release: releaseAll };
 }
 
 export function useModule<T extends ModuleExports>({
-  from: external,
+  from: port,
   namespace: scope = null,
-  origin,
   timeout = 1000,
-  to: internal = self,
 }: {
-  from: ExternalMessageTarget;
+  from: MessagePortLike;
   namespace?: string | null;
   origin?: string;
   timeout?: number;
-  to?: InternalMessageTarget;
 }): RemoteModule<T> {
-  return createProxy({
-    channel: { external, internal, origin, scope, timeout },
-  });
+  return createProxy({ channel: { port, scope, timeout } });
 }
 
 function awaitResponse<T extends Transportable>({
@@ -283,26 +291,23 @@ function awaitResponse<T extends Transportable>({
       reject(new TimeoutError("Connection timeout."))
     );
 
-    channel.internal.addEventListener("message", function onMessage(event) {
+    channel.port.addEventListener("message", function onMessage(event) {
       const data = safeParse(event.data);
 
       if (!isMessage(data) || data.id !== id) return;
 
-      const message = decode({
-        channel: { ...channel, external: event.source },
-        message: data,
-      });
+      const message = decode({ channel, message: data });
 
       switch (message.type) {
         case MessageType.Pong:
           cancelTimeout();
           break;
         case MessageType.Set:
-          channel.internal.removeEventListener("message", onMessage);
+          channel.port.removeEventListener("message", onMessage);
           resolve(message.value as T);
           break;
         case MessageType.Error:
-          channel.internal.removeEventListener("message", onMessage);
+          channel.port.removeEventListener("message", onMessage);
           reject(message.error);
           break;
         default:
@@ -310,15 +315,14 @@ function awaitResponse<T extends Transportable>({
       }
     });
 
-    channel.external.postMessage(
+    channel.port.postMessage(
       encode({
         channel,
         message: { id, scope, source: MESSAGE_SOURCE, type: MessageType.Ping },
-      }),
-      channel.origin
+      })
     );
 
-    channel.external.postMessage(encode({ channel, message }), channel.origin);
+    channel.port.postMessage(encode({ channel, message }));
   });
 }
 
@@ -398,8 +402,8 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
 
         createModule({
           export: { default: value },
-          from: channel.internal,
           namespace: scope,
+          within: (createConnection) => createConnection(channel.port),
         });
 
         return { scope, type: "function" };

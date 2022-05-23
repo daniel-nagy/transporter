@@ -1,8 +1,9 @@
 import {
   createModule,
-  ExternalMessageTarget,
-  InternalMessageTarget,
+  MessageEvent,
+  MessagePortLike,
   MessageSubscriber,
+  ModuleContainer,
   ModuleExport,
   RemoteValue,
   TimeoutError,
@@ -19,19 +20,31 @@ declare namespace globalThis {
   const gc: () => void;
 }
 
-type MessageTarget = ExternalMessageTarget & InternalMessageTarget;
+type MessageTargetLike = {
+  addEventListener(type: "message", callback: MessageSubscriber): void;
+  dispatchEvent(type: "message", event: { data: string }): void;
+  removeEventListener(type: "message", callback: MessageSubscriber): void;
+};
 
-const createMessageTarget = (): MessageTarget => {
+const connectMessageTargets = (
+  t1: MessageTargetLike,
+  t2: MessageTargetLike
+): MessagePortLike =>
+  Object.assign(t1, {
+    postMessage(message: string) {
+      t2.dispatchEvent("message", { data: message });
+    },
+  });
+
+const createMessageTarget = (): MessageTargetLike => {
   let callbacks: MessageSubscriber[] = [];
 
   return {
     addEventListener(_type: "message", callback: MessageSubscriber) {
       callbacks = [...callbacks, callback];
     },
-    postMessage(message: string) {
-      callbacks.forEach((callback) =>
-        callback({ data: message, source: { postMessage() {} } })
-      );
+    dispatchEvent(_type: "message", event: MessageEvent) {
+      callbacks.forEach((callback) => callback(event));
     },
     removeEventListener(_type: "message", callback: MessageSubscriber) {
       callbacks = callbacks.filter((cb) => cb !== callback);
@@ -39,48 +52,31 @@ const createMessageTarget = (): MessageTarget => {
   };
 };
 
-const withSource = <T extends InternalMessageTarget>(
-  messageTarget: T,
-  source: ExternalMessageTarget
-): T => {
-  const { addEventListener, removeEventListener } = messageTarget;
-  const callbackMap = new WeakMap<MessageSubscriber, MessageSubscriber>();
-
-  return Object.assign(messageTarget, {
-    addEventListener(_type: "message", callback: MessageSubscriber) {
-      const wrappedCallback: MessageSubscriber = (event) =>
-        callback({ ...event, source });
-      callbackMap.set(callback, wrappedCallback);
-      addEventListener("message", wrappedCallback);
-    },
-    removeEventListener(_type: "message", callback: MessageSubscriber) {
-      const wrappedCallback = callbackMap.get(callback);
-      removeEventListener("message", wrappedCallback ?? callback);
-    },
-  });
-};
-
 const createMessageChannel = () => {
   const t1 = createMessageTarget();
   const t2 = createMessageTarget();
-  return [withSource(t1, t2), withSource(t2, t1)];
+  return [connectMessageTargets(t1, t2), connectMessageTargets(t2, t1)];
 };
+
+const portContainer =
+  (port: MessagePortLike): ModuleContainer =>
+  (createConnection) =>
+    createConnection(port);
 
 const exportValue = <T extends ModuleExport>(
   value: T,
   { namespace = null }: { namespace?: string | null } = {}
 ): { proxy: RemoteValue<T>; release(): void } => {
-  const [t1, t2] = createMessageChannel();
+  const [p1, p2] = createMessageChannel();
 
   const { release } = createModule({
     export: { default: value },
-    from: t1,
     namespace,
+    within: portContainer(p1),
   });
 
   const { default: remoteValue } = useModule<{ default: T }>({
-    from: t1,
-    to: t2,
+    from: p2,
     namespace,
   });
 
@@ -253,11 +249,11 @@ describe("transporter", () => {
   });
 
   test("destructuring named exports", async () => {
-    const [t1, t2] = createMessageChannel();
+    const [p1, p2] = createMessageChannel();
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      from: t1,
+      within: portContainer(p1),
     });
 
     const proxy = useModule<{
@@ -265,8 +261,7 @@ describe("transporter", () => {
       b: ObservableLike<"b">;
       c: () => "c";
     }>({
-      from: t1,
-      to: t2,
+      from: p2,
     });
 
     const { a, b, c } = proxy;
@@ -277,11 +272,11 @@ describe("transporter", () => {
   });
 
   test("enumerating named exports throws a TypeError", () => {
-    const [t1, t2] = createMessageChannel();
+    const [p1, p2] = createMessageChannel();
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      from: t1,
+      within: portContainer(p1),
     });
 
     const proxy = useModule<{
@@ -289,8 +284,7 @@ describe("transporter", () => {
       b: ObservableLike<"b">;
       c: () => "c";
     }>({
-      from: t1,
-      to: t2,
+      from: p2,
     });
 
     expect(() => {
@@ -522,26 +516,26 @@ describe("transporter", () => {
   });
 
   test("bidirectional modules", async () => {
-    const [t1, t2] = createMessageChannel();
+    const [p1, p2] = createMessageChannel();
 
-    createModule({ export: { default: "a" }, from: t1 });
-    createModule({ export: { default: "b" }, from: t2 });
+    createModule({ export: { default: "a" }, within: portContainer(p1) });
+    createModule({ export: { default: "b" }, within: portContainer(p2) });
 
-    const A = useModule<{ default: ObservableLike<"a"> }>({ from: t1, to: t2 });
-    const B = useModule<{ default: ObservableLike<"b"> }>({ from: t2, to: t1 });
+    const A = useModule<{ default: ObservableLike<"a"> }>({ from: p2 });
+    const B = useModule<{ default: ObservableLike<"b"> }>({ from: p1 });
 
     expect(await firstValueFrom(A.default)).toEqual("a");
     expect(await firstValueFrom(B.default)).toEqual("b");
   });
 
   test("messages must have the correct scope and source", async () => {
-    const [t1, t2] = createMessageChannel();
-    const spy = jest.spyOn(t2, "postMessage");
+    const [p1, p2] = createMessageChannel();
+    const spy = jest.spyOn(p1, "postMessage");
 
     createModule({
       export: { default: "a" },
-      from: t1,
       namespace: "A",
+      within: portContainer(p1),
     });
 
     const message = {
@@ -553,19 +547,19 @@ describe("transporter", () => {
       type: "call",
     };
 
-    t1.postMessage(JSON.stringify(message));
+    p2.postMessage(JSON.stringify(message));
     await scheduleTask();
     expect(spy).not.toHaveBeenCalled();
 
-    t1.postMessage(JSON.stringify({ ...message, scope: "A" }));
+    p2.postMessage(JSON.stringify({ ...message, scope: "A" }));
     await scheduleTask();
     expect(spy).not.toHaveBeenCalled();
 
-    t1.postMessage(JSON.stringify({ ...message, source: "transporter" }));
+    p2.postMessage(JSON.stringify({ ...message, source: "transporter" }));
     await scheduleTask();
     expect(spy).not.toHaveBeenCalled();
 
-    t1.postMessage(
+    p2.postMessage(
       JSON.stringify({ ...message, scope: "A", source: "transporter" })
     );
 
@@ -588,8 +582,8 @@ describe("transporter", () => {
   test("the promise will be rejected if a signal is not received in the allowed time", async () => {
     jest.useFakeTimers();
 
-    const [t1, t2] = createMessageChannel();
-    const proxy = useModule({ from: t1, timeout: 1000, to: t2 });
+    const [, p2] = createMessageChannel();
+    const proxy = useModule({ from: p2, timeout: 1000 });
     const assertion = expect(proxy).rejects.toThrow(TimeoutError);
 
     jest.advanceTimersByTime(1000);
@@ -612,14 +606,16 @@ describe("transporter", () => {
   });
 
   test("exported functions are garbage collected", async () => {
-    const [t1, t2] = createMessageChannel();
-    const spy = jest.spyOn(t1, "postMessage");
+    const [p1, p2] = createMessageChannel();
+    const spy = jest.spyOn(p2, "postMessage");
 
-    createModule({ export: { default: () => () => "🥸" }, from: t1 });
+    createModule({
+      export: { default: () => () => "🥸" },
+      within: portContainer(p1),
+    });
 
     const proxy = useModule<{ default: () => () => string }>({
-      from: t1,
-      to: t2,
+      from: p2,
     });
 
     let proxyFunc: (() => Promise<string>) | null = await proxy.default();
