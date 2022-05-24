@@ -91,7 +91,7 @@ export type MessagePortLike = {
 
 export type MessageSubscriber = (event: MessageEvent) => void;
 
-export type ModuleContainer = (
+export type MessagingContext = (
   createConnection: (port: MessagePortLike) => void
 ) => void;
 
@@ -153,6 +153,9 @@ export class TimeoutError extends Error {
   }
 }
 
+export const defaultMessagingContext: MessagingContext = (createConnection) =>
+  createConnection(self);
+
 const registry = createRegistry<Channel>((channel) => {
   channel.port.postMessage(
     encode({
@@ -171,12 +174,12 @@ export function createModule<T extends ModuleExports>({
   export: api,
   namespace: scope = null,
   timeout = 1000,
-  within: container = (createConnection) => createConnection(self),
+  within: context = defaultMessagingContext,
 }: {
   export: T;
   namespace?: string | null;
   timeout?: number;
-  within?: ModuleContainer;
+  within?: MessagingContext | MessagingContext[];
 }): { release(): void } {
   const _exports = mapOwnProps(api, (value) => {
     switch (true) {
@@ -192,20 +195,56 @@ export function createModule<T extends ModuleExports>({
   const portSubscriptions: (() => void)[] = [];
   const releaseAll = () => portSubscriptions.forEach((release) => release());
 
-  container((port) => {
-    const channel = { port, scope, timeout };
-    const release = () => port.removeEventListener("message", onMessage);
+  flatten([context]).forEach((context) =>
+    context((port) => {
+      const channel = { port, scope, timeout };
+      const release = () => port.removeEventListener("message", onMessage);
 
-    async function onMessage(event: MessageEvent) {
-      const data = safeParse(event.data);
+      async function onMessage(event: MessageEvent) {
+        const data = safeParse(event.data);
 
-      if (!isMessage(data) || data.scope !== scope) return;
+        if (!isMessage(data) || data.scope !== scope) return;
 
-      const message = decode({ channel, message: data });
+        const message = decode({ channel, message: data });
 
-      switch (message.type) {
-        case MessageType.Call:
-          try {
+        switch (message.type) {
+          case MessageType.Call:
+            try {
+              port.postMessage(
+                encode({
+                  channel,
+                  message: {
+                    id: message.id,
+                    scope,
+                    source: MESSAGE_SOURCE,
+                    type: MessageType.Set,
+                    value: await callFunction(
+                      _exports,
+                      message.path,
+                      message.args
+                    ),
+                  },
+                })
+              );
+            } catch (exception) {
+              port.postMessage(
+                encode({
+                  channel,
+                  message: {
+                    id: message.id,
+                    scope,
+                    source: MESSAGE_SOURCE,
+                    type: MessageType.Error,
+                    error: exception as Transportable,
+                  },
+                })
+              );
+            }
+            break;
+          case MessageType.GarbageCollect:
+            release();
+            break;
+          case MessageType.Ping:
             port.postMessage(
               encode({
                 channel,
@@ -213,54 +252,20 @@ export function createModule<T extends ModuleExports>({
                   id: message.id,
                   scope,
                   source: MESSAGE_SOURCE,
-                  type: MessageType.Set,
-                  value: await callFunction(
-                    _exports,
-                    message.path,
-                    message.args
-                  ),
+                  type: MessageType.Pong,
                 },
               })
             );
-          } catch (exception) {
-            port.postMessage(
-              encode({
-                channel,
-                message: {
-                  id: message.id,
-                  scope,
-                  source: MESSAGE_SOURCE,
-                  type: MessageType.Error,
-                  error: exception as Transportable,
-                },
-              })
-            );
-          }
-          break;
-        case MessageType.GarbageCollect:
-          release();
-          break;
-        case MessageType.Ping:
-          port.postMessage(
-            encode({
-              channel,
-              message: {
-                id: message.id,
-                scope,
-                source: MESSAGE_SOURCE,
-                type: MessageType.Pong,
-              },
-            })
-          );
-          break;
-        default:
-        // no default
+            break;
+          default:
+          // no default
+        }
       }
-    }
 
-    port.addEventListener("message", onMessage);
-    portSubscriptions.push(release);
-  });
+      port.addEventListener("message", onMessage);
+      portSubscriptions.push(release);
+    })
+  );
 
   return { release: releaseAll };
 }
@@ -425,6 +430,13 @@ function callFunction(
   return name
     ? (getIn(from, subpath) as any)[name]?.(...args)
     : (getIn(from, path) as Function)(...args);
+}
+
+function flatten<T>(list: ReadonlyArray<T | ReadonlyArray<T>>): T[] {
+  return list.reduce<T[]>(
+    (acc, item) => [...acc, ...(Array.isArray(item) ? flatten(item) : [item])],
+    []
+  );
 }
 
 function generateId(): string {

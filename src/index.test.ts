@@ -3,7 +3,7 @@ import {
   MessageEvent,
   MessagePortLike,
   MessageSubscriber,
-  ModuleContainer,
+  MessagingContext,
   ModuleExport,
   RemoteValue,
   TimeoutError,
@@ -58,8 +58,8 @@ const createMessageChannel = () => {
   return [connectMessageTargets(t1, t2), connectMessageTargets(t2, t1)];
 };
 
-const portContainer =
-  (port: MessagePortLike): ModuleContainer =>
+const portContext =
+  (port: MessagePortLike): MessagingContext =>
   (createConnection) =>
     createConnection(port);
 
@@ -72,7 +72,7 @@ const exportValue = <T extends ModuleExport>(
   const { release } = createModule({
     export: { default: value },
     namespace,
-    within: portContainer(p1),
+    within: portContext(p1),
   });
 
   const { default: remoteValue } = useModule<{ default: T }>({
@@ -253,7 +253,7 @@ describe("transporter", () => {
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      within: portContainer(p1),
+      within: portContext(p1),
     });
 
     const proxy = useModule<{
@@ -276,7 +276,7 @@ describe("transporter", () => {
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      within: portContainer(p1),
+      within: portContext(p1),
     });
 
     const proxy = useModule<{
@@ -518,8 +518,8 @@ describe("transporter", () => {
   test("bidirectional modules", async () => {
     const [p1, p2] = createMessageChannel();
 
-    createModule({ export: { default: "a" }, within: portContainer(p1) });
-    createModule({ export: { default: "b" }, within: portContainer(p2) });
+    createModule({ export: { default: "a" }, within: portContext(p1) });
+    createModule({ export: { default: "b" }, within: portContext(p2) });
 
     const A = useModule<{ default: ObservableLike<"a"> }>({ from: p2 });
     const B = useModule<{ default: ObservableLike<"b"> }>({ from: p1 });
@@ -535,7 +535,7 @@ describe("transporter", () => {
     createModule({
       export: { default: "a" },
       namespace: "A",
-      within: portContainer(p1),
+      within: portContext(p1),
     });
 
     const message = {
@@ -611,7 +611,7 @@ describe("transporter", () => {
 
     createModule({
       export: { default: () => () => "🥸" },
-      within: portContainer(p1),
+      within: portContext(p1),
     });
 
     const proxy = useModule<{ default: () => () => string }>({

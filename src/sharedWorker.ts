@@ -1,6 +1,6 @@
 /// <reference lib="webworker" />
 
-import { MessagePortLike, ModuleContainer } from ".";
+import { MessagePortLike, MessagingContext } from ".";
 
 type CreateSharedWorkerConnection = (context: {
   delegate(): MessagePortLike;
@@ -13,13 +13,13 @@ export function sharedWorkerConnection(worker: SharedWorker): MessagePort {
   return worker.port;
 }
 
-export function sharedWorkerContainer({
+export function sharedWorkerContext({
   createConnection = ({ delegate }) => delegate(),
   worker = self as unknown as SharedWorkerGlobalScope,
 }: {
   createConnection?: CreateSharedWorkerConnection;
   worker?: SharedWorkerGlobalScope;
-} = {}): ModuleContainer {
+} = {}): MessagingContext {
   return (setPort) => {
     worker.addEventListener("connect", ({ origin, ports: [port] }) => {
       const portLike = createConnection({

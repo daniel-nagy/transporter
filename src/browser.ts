@@ -1,11 +1,11 @@
 /// <reference lib="dom" />
 
-import { MessagePortLike, ModuleContainer } from ".";
+import { MessagePortLike, MessagingContext } from ".";
 import { safeParse } from "./json";
 import { isObject } from "./object";
 import { Queue } from "./Queue";
 
-const MESSAGE_SOURCE = "transporter::browser_container";
+const MESSAGE_SOURCE = "transporter::browser_context";
 
 type CreateBrowserConnection = (context: {
   delegate(): MessagePortLike;
@@ -69,13 +69,13 @@ export function browserConnection(
   });
 }
 
-export function browserContainer({
+export function browserContext({
   createConnection = ({ delegate }) => delegate(),
   window = self,
 }: {
   createConnection?: CreateBrowserConnection;
   window?: Window;
-} = {}): ModuleContainer {
+} = {}): MessagingContext {
   return (setPort) => {
     window.addEventListener("message", ({ data, origin, ports: [port] }) => {
       if (!isCreateConnectionMessage(safeParse(data))) return;
