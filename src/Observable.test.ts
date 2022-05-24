@@ -16,6 +16,19 @@ describe("observable", () => {
     expect(observer).toHaveBeenCalledWith(5);
   });
 
+  test("subscribing to the same observable more than once", () => {
+    const observable = Observable.of(5);
+    const observer0 = jest.fn();
+    const observer1 = jest.fn();
+    observable.subscribe(observer0);
+    observable.subscribe(observer1);
+
+    expect(observer0).toHaveBeenCalledTimes(1);
+    expect(observer1).toHaveBeenCalledTimes(1);
+    expect(observer0).toHaveBeenCalledWith(5);
+    expect(observer1).toHaveBeenCalledWith(5);
+  });
+
   test("emitting multiple values", () => {
     const observable = Observable.of(1, 2, 3);
     const observer = jest.fn();

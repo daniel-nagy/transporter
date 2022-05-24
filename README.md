@@ -68,7 +68,7 @@ createModule<T extends ModuleExports>({
 };
 ```
 
-Create a new module and define its exports. Modules exist within 1 or more messaging contexts. See the [`MessagingContext`](#messagingcontext) type for more info. You may provide a namespace to avoid collision with other modules from the same message target. It is recommended to always namespace your modules.
+Create a new module and define its exports. Modules exist within 1 or more messaging contexts. See the [`MessagingContext`](#messagingcontext) type for more info. You may provide a namespace to avoid collision with other modules within the same messaging context. It is recommended to always namespace your modules.
 
 Module exports should be considered final. You can use observables to export values that may change overtime. All exports must be named. Anonymous default exports are not allowed. If an exported value is neither a function nor an observable it will be wrapped in an observable that emits the value and then completes.
 
@@ -187,7 +187,7 @@ type MessagingContext = (
 ) => void;
 ```
 
-A messaging context is responsible for creating a private connection between 2 message targets. This allows Transporter to be agnostic of how the message port is created. Transporter cannot possibly know how to connect to every type of message target.
+A messaging context is responsible for creating a private channel between 2 message targets. This allows Transporter to be agnostic of how the channel is created since Transporter cannot possibly know how every message channel is created.
 
 Transporter provides some useful messaging contexts for things like browser windows and Web workers. However, it is possible to create your own messaging contexts. For example, an HTTP context, a Websocket context, a React Native Webview context, etc.
 

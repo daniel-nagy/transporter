@@ -1,90 +1,24 @@
 import {
   createModule,
-  MessageEvent,
   MessagePortLike,
-  MessageSubscriber,
   MessagingContext,
   ModuleExport,
   RemoteValue,
   TimeoutError,
   useModule,
-} from "./index";
+} from ".";
+import { createMessageChannel } from "./messageChannel";
 import {
   BehaviorSubject,
   firstValueFrom,
   Observable,
   ObservableLike,
 } from "./Observable";
+import { virtualConnection, virtualContext } from "./virtual";
 
 declare namespace globalThis {
   const gc: () => void;
 }
-
-type MessageTargetLike = {
-  addEventListener(type: "message", callback: MessageSubscriber): void;
-  dispatchEvent(type: "message", event: { data: string }): void;
-  removeEventListener(type: "message", callback: MessageSubscriber): void;
-};
-
-const connectMessageTargets = (
-  t1: MessageTargetLike,
-  t2: MessageTargetLike
-): MessagePortLike =>
-  Object.assign(t1, {
-    postMessage(message: string) {
-      t2.dispatchEvent("message", { data: message });
-    },
-  });
-
-const createMessageTarget = (): MessageTargetLike => {
-  let callbacks: MessageSubscriber[] = [];
-
-  return {
-    addEventListener(_type: "message", callback: MessageSubscriber) {
-      callbacks = [...callbacks, callback];
-    },
-    dispatchEvent(_type: "message", event: MessageEvent) {
-      callbacks.forEach((callback) => callback(event));
-    },
-    removeEventListener(_type: "message", callback: MessageSubscriber) {
-      callbacks = callbacks.filter((cb) => cb !== callback);
-    },
-  };
-};
-
-const createMessageChannel = () => {
-  const t1 = createMessageTarget();
-  const t2 = createMessageTarget();
-  return [connectMessageTargets(t1, t2), connectMessageTargets(t2, t1)];
-};
-
-const portContext =
-  (port: MessagePortLike): MessagingContext =>
-  (createConnection) =>
-    createConnection(port);
-
-const exportValue = <T extends ModuleExport>(
-  value: T,
-  { namespace = null }: { namespace?: string | null } = {}
-): { proxy: RemoteValue<T>; release(): void } => {
-  const [p1, p2] = createMessageChannel();
-
-  const { release } = createModule({
-    export: { default: value },
-    namespace,
-    within: portContext(p1),
-  });
-
-  const { default: remoteValue } = useModule<{ default: T }>({
-    from: p2,
-    namespace,
-  });
-
-  return { proxy: remoteValue, release };
-};
-
-const scheduleTask = <R>(callback?: () => R) =>
-  new Promise((resolve) => setTimeout(() => resolve(callback?.())));
 
 describe("transporter", () => {
   test("exporting an observable of type undefined", async () => {
@@ -507,12 +441,52 @@ describe("transporter", () => {
     expect(await proxy.call({ a: "a" })).toEqual({ a: "a" });
   });
 
-  test("namespaced module exports", async () => {
-    const { proxy: A } = exportValue("a", { namespace: "A" });
-    const { proxy: B } = exportValue("b", { namespace: "B" });
+  test("namespaced modules in a single messaging context", async () => {
+    createModule({
+      export: { default: "a" },
+      namespace: "A",
+      within: virtualContext(),
+    });
+
+    createModule({
+      export: { default: "b" },
+      namespace: "B",
+      within: virtualContext(),
+    });
+
+    const { default: A } = useModule<{ default: "a" }>({
+      from: virtualConnection(),
+      namespace: "A",
+    });
+
+    const { default: B } = useModule<{ default: "b" }>({
+      from: virtualConnection(),
+      namespace: "B",
+    });
 
     expect(await firstValueFrom(A)).toEqual("a");
     expect(await firstValueFrom(B)).toEqual("b");
+  });
+
+  test("using the same module more than once in a single messaging context", async () => {
+    createModule({
+      export: { default: "a" },
+      namespace: "A",
+      within: virtualContext(),
+    });
+
+    const { default: A0 } = useModule<{ default: "a" }>({
+      from: virtualConnection(),
+      namespace: "A",
+    });
+
+    const { default: A1 } = useModule<{ default: "a" }>({
+      from: virtualConnection(),
+      namespace: "A",
+    });
+
+    expect(await firstValueFrom(A0)).toEqual("a");
+    expect(await firstValueFrom(A1)).toEqual("a");
   });
 
   test("bidirectional modules", async () => {
@@ -640,3 +614,31 @@ describe("transporter", () => {
     expect(await proxyFunc?.()).toEqual("🥸");
   });
 });
+
+function exportValue<T extends ModuleExport>(
+  value: T,
+  { namespace = null }: { namespace?: string | null } = {}
+): { proxy: RemoteValue<T>; release(): void } {
+  const [p1, p2] = createMessageChannel();
+
+  const { release } = createModule({
+    export: { default: value },
+    namespace,
+    within: portContext(p1),
+  });
+
+  const { default: remoteValue } = useModule<{ default: T }>({
+    from: p2,
+    namespace,
+  });
+
+  return { proxy: remoteValue, release };
+}
+
+function portContext(port: MessagePortLike): MessagingContext {
+  return (createConnection) => createConnection(port);
+}
+
+function scheduleTask<R>(callback?: () => R) {
+  return new Promise((resolve) => setTimeout(() => resolve(callback?.())));
+}

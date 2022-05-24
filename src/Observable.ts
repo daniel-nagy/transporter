@@ -46,29 +46,29 @@ export class Observable<T> implements ObservableLike<T> {
     });
   }
 
-  private _state = ObservableState.NotComplete;
   private _subscribe: (observer: Partial<Observer<T>>) => () => void;
 
   constructor(subscribe: (observer: Observer<T>) => (() => void) | void) {
     this._subscribe = (observer: Partial<Observer<T>>) => {
       let errorRef: unknown = undefined;
+      let state = ObservableState.NotComplete;
       let subscribeComplete = false;
       let throwError = false;
 
       const cleanUp = subscribe({
         next: (value) => {
-          if (this._state !== ObservableState.NotComplete) return;
+          if (state !== ObservableState.NotComplete) return;
           observer.next?.(value);
         },
         complete: () => {
-          if (this._state !== ObservableState.NotComplete) return;
-          this._state = ObservableState.Complete;
+          if (state !== ObservableState.NotComplete) return;
+          state = ObservableState.Complete;
           observer.complete?.();
           subscribeComplete && cleanUp?.();
         },
         error: (error) => {
-          if (this._state !== ObservableState.NotComplete) return;
-          this._state = ObservableState.Error;
+          if (state !== ObservableState.NotComplete) return;
+          state = ObservableState.Error;
           observer.error?.(error);
           subscribeComplete && cleanUp?.();
 
@@ -85,15 +85,15 @@ export class Observable<T> implements ObservableLike<T> {
 
       subscribeComplete = true;
 
-      if (this._state !== ObservableState.NotComplete) {
+      if (state !== ObservableState.NotComplete) {
         cleanUp?.();
       }
 
       if (throwError) throw errorRef;
 
       return () => {
-        if (this._state !== ObservableState.NotComplete) return;
-        this._state = ObservableState.Unsubscribed;
+        if (state !== ObservableState.NotComplete) return;
+        state = ObservableState.Unsubscribed;
         cleanUp?.();
       };
     };
