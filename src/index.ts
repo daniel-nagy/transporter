@@ -2,6 +2,7 @@ import { createRegistry } from "./FinalizationRegistry";
 import { safeParse } from "./json";
 import { getIn, isObject, mapOwnProps, mapValues, ObjectPath } from "./object";
 import { Observable, ObservableLike } from "./Observable";
+import { generateId } from "./uuid";
 
 // Do not assume a specific JavaScript runtime. However, require these global
 // types.
@@ -82,6 +83,9 @@ type Message =
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 
 export type MessageEvent = { data: string };
+export type MessageGateway = (
+  onConnect: (port: MessagePortLike) => void
+) => void;
 
 export type MessagePortLike = {
   addEventListener(type: "message", listener: MessageSubscriber): void;
@@ -90,11 +94,6 @@ export type MessagePortLike = {
 };
 
 export type MessageSubscriber = (event: MessageEvent) => void;
-
-export type MessagingContext = (
-  createConnection: (port: MessagePortLike) => void
-) => void;
-
 export type ModuleExport = Transportable | ObservableLike<Transportable>;
 export type ModuleExports = { [name: string]: ModuleExport };
 
@@ -153,8 +152,8 @@ export class TimeoutError extends Error {
   }
 }
 
-export const defaultMessagingContext: MessagingContext = (createConnection) =>
-  createConnection(self);
+export const defaultMessageGateway: MessageGateway = (onConnect) =>
+  onConnect(self);
 
 const registry = createRegistry<Channel>((channel) => {
   channel.port.postMessage(
@@ -174,12 +173,12 @@ export function createModule<T extends ModuleExports>({
   export: api,
   namespace: scope = null,
   timeout = 1000,
-  within: context = defaultMessagingContext,
+  using: gateway = defaultMessageGateway,
 }: {
   export: T;
   namespace?: string | null;
   timeout?: number;
-  within?: MessagingContext | MessagingContext[];
+  using?: MessageGateway | MessageGateway[];
 }): { release(): void } {
   const _exports = mapOwnProps(api, (value) => {
     switch (true) {
@@ -195,8 +194,8 @@ export function createModule<T extends ModuleExports>({
   const portSubscriptions: (() => void)[] = [];
   const releaseAll = () => portSubscriptions.forEach((release) => release());
 
-  flatten([context]).forEach((context) =>
-    context((port) => {
+  flatten([gateway]).forEach((gateway) =>
+    gateway((port) => {
       const channel = { port, scope, timeout };
       const release = () => port.removeEventListener("message", onMessage);
 
@@ -270,7 +269,7 @@ export function createModule<T extends ModuleExports>({
   return { release: releaseAll };
 }
 
-export function useModule<T extends ModuleExports>({
+export function linkModule<T extends ModuleExports>({
   from: port,
   namespace: scope = null,
   timeout = 1000,
@@ -360,6 +359,8 @@ function createProxy<T extends ModuleExports>({
         case prop === "then" && !promiseLike:
           // Prevents promise chaining when the proxy is wrapped in a promise.
           return undefined;
+        case prop === "toJSON":
+          return undefined;
         default:
           return createProxy({ channel, path: [...path, prop as string] });
       }
@@ -407,7 +408,7 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
         createModule({
           export: { default: value },
           namespace: scope,
-          within: (createConnection) => createConnection(channel.port),
+          using: (onConnect) => onConnect(channel.port),
         });
 
         return { scope, type: "function" };
@@ -437,10 +438,6 @@ function flatten<T>(list: ReadonlyArray<T | ReadonlyArray<T>>): T[] {
     (acc, item) => [...acc, ...(Array.isArray(item) ? flatten(item) : [item])],
     []
   );
-}
-
-function generateId(): string {
-  return Math.random().toString(36).slice(2, 11);
 }
 
 function isEncodedFunction(value: unknown): value is EncodedFunction {

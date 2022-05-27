@@ -1,13 +1,13 @@
 /// <reference lib="dom" />
 
-import { MessagePortLike, MessagingContext } from ".";
+import { MessageGateway, MessagePortLike } from ".";
 import { safeParse } from "./json";
 import { isObject } from "./object";
 import { Queue } from "./Queue";
 
-const MESSAGE_SOURCE = "transporter::browser_context";
+const MESSAGE_SOURCE = "transporter::browser";
 
-type CreateBrowserConnection = (context: {
+type ConnectProxy = (connection: {
   delegate(): MessagePortLike;
   origin: string;
   port: MessagePort;
@@ -30,7 +30,7 @@ type CreateConnectionMessage = {
 
 type Message = ConnectionCreatedMessage | CreateConnectionMessage;
 
-export function browserConnection(
+export function browserChannel(
   optionsOrWindow: { origin?: string; window: Window } | Window
 ): MessagePortLike {
   const { origin = "*", window } =
@@ -51,8 +51,9 @@ export function browserConnection(
   let messageQueue: Queue<string> | null = new Queue<string>();
 
   channel.port1.start();
-  channel.port1.addEventListener("message", (event) => {
+  channel.port1.addEventListener("message", function onMessage(event) {
     if (isConnectionCreatedMessage(safeParse(event.data))) {
+      channel.port1.removeEventListener("message", onMessage);
       connected = true;
       messageQueue?.drain((message) => channel.port1.postMessage(message));
       messageQueue = null;
@@ -69,18 +70,18 @@ export function browserConnection(
   });
 }
 
-export function browserContext({
-  createConnection = ({ delegate }) => delegate(),
+export function browserGateway({
+  connect = ({ delegate }) => delegate(),
   window = self,
 }: {
-  createConnection?: CreateBrowserConnection;
+  connect?: ConnectProxy;
   window?: Window;
-} = {}): MessagingContext {
-  return (setPort) => {
+} = {}): MessageGateway {
+  return (onConnect) => {
     window.addEventListener("message", ({ data, origin, ports: [port] }) => {
       if (!isCreateConnectionMessage(safeParse(data))) return;
 
-      const portLike = createConnection({
+      const portLike = connect({
         delegate: () => {
           port.start();
           return port;
@@ -90,6 +91,7 @@ export function browserContext({
       });
 
       if (!portLike) return;
+      onConnect(portLike);
 
       const message: ConnectionCreatedMessage = {
         source: MESSAGE_SOURCE,
@@ -97,7 +99,6 @@ export function browserContext({
       };
 
       portLike?.postMessage(JSON.stringify(message));
-      setPort(portLike);
     });
   };
 }

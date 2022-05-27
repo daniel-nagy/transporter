@@ -1,72 +1,41 @@
-import {
-  MessageEvent,
-  MessagePortLike,
-  MessageSubscriber,
-  MessagingContext,
-} from ".";
-import { createMessageChannel } from "./messageChannel";
+import { MessageGateway, MessagePortLike } from ".";
+import { createEventTarget, createMessageChannel } from "./messaging";
 
-type CreateVirtualConnection = (context: {
+type ConnectProxy = (connection: {
   delegate(): MessagePortLike;
   port: MessagePortLike;
 }) => MessagePortLike | null;
 
 type ConnectEvent = {
   port: MessagePortLike;
+  type: "connect";
 };
 
-type ConnectSubscriber = (event: ConnectEvent) => void;
+const virtualMessageTarget = createEventTarget();
 
-type MessageTargetLike = {
-  addEventListener(type: "connect", callback: ConnectSubscriber): void;
-  addEventListener(type: "message", callback: MessageSubscriber): void;
-  dispatchEvent(type: "connect", event: ConnectEvent): void;
-  dispatchEvent(type: "message", event: MessageEvent): void;
-  removeEventListener(type: "connect", callback: ConnectSubscriber): void;
-  removeEventListener(type: "message", callback: MessageSubscriber): void;
-};
-
-const createMessageTarget = (): MessageTargetLike => {
-  const callbackMap = new Map<string, Function[]>();
-  const getCallbacks = (type: string) => callbackMap.get(type) ?? [];
-
-  return {
-    addEventListener(type, callback) {
-      callbackMap.set(type, [...getCallbacks(type), callback]);
-    },
-    dispatchEvent(type, event) {
-      getCallbacks(type).forEach((callback) => callback(event));
-    },
-    removeEventListener(type, callback) {
-      callbackMap.set(
-        type,
-        getCallbacks(type).filter((cb) => cb !== callback)
-      );
-    },
-  };
-};
-
-const virtualMessageTarget = createMessageTarget();
-
-export function virtualConnection(): MessagePortLike {
+export function virtualChannel(): MessagePortLike {
   const [port1, port2] = createMessageChannel();
-  virtualMessageTarget.dispatchEvent("connect", { port: port2 });
+
+  virtualMessageTarget.dispatchEvent<ConnectEvent>({
+    type: "connect",
+    port: port2,
+  });
+
   return port1;
 }
 
-export function virtualContext({
-  createConnection = ({ delegate }) => delegate(),
+export function virtualGateway({
+  connect = ({ delegate }) => delegate(),
 }: {
-  createConnection?: CreateVirtualConnection;
-} = {}): MessagingContext {
-  return (setPort) => {
-    virtualMessageTarget.addEventListener("connect", ({ port }) => {
-      const portLike = createConnection({
-        delegate: () => port,
-        port,
-      });
-
-      portLike && setPort(portLike);
-    });
+  connect?: ConnectProxy;
+} = {}): MessageGateway {
+  return (onConnect) => {
+    virtualMessageTarget.addEventListener<ConnectEvent>(
+      "connect",
+      ({ port }) => {
+        const portLike = connect({ delegate: () => port, port });
+        portLike && onConnect(portLike);
+      }
+    );
   };
 }

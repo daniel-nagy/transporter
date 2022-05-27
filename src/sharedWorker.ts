@@ -1,28 +1,28 @@
 /// <reference lib="webworker" />
 
-import { MessagePortLike, MessagingContext } from ".";
+import { MessageGateway, MessagePortLike } from ".";
 
-type CreateSharedWorkerConnection = (context: {
+type ConnectProxy = (connection: {
   delegate(): MessagePortLike;
   origin: string;
   port: MessagePort;
 }) => MessagePortLike | null;
 
-export function sharedWorkerConnection(worker: SharedWorker): MessagePort {
+export function sharedWorkerChannel(worker: SharedWorker): MessagePort {
   worker.port.start();
   return worker.port;
 }
 
-export function sharedWorkerContext({
-  createConnection = ({ delegate }) => delegate(),
+export function sharedWorkerGateway({
+  connect = ({ delegate }) => delegate(),
   worker = self as unknown as SharedWorkerGlobalScope,
 }: {
-  createConnection?: CreateSharedWorkerConnection;
+  connect?: ConnectProxy;
   worker?: SharedWorkerGlobalScope;
-} = {}): MessagingContext {
-  return (setPort) => {
+} = {}): MessageGateway {
+  return (onConnect) => {
     worker.addEventListener("connect", ({ origin, ports: [port] }) => {
-      const portLike = createConnection({
+      const portLike = connect({
         delegate() {
           port.start();
           return port;
@@ -31,7 +31,7 @@ export function sharedWorkerContext({
         port,
       });
 
-      portLike && setPort(portLike);
+      portLike && onConnect(portLike);
     });
   };
 }

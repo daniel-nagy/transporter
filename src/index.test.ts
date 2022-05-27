@@ -1,20 +1,20 @@
 import {
   createModule,
+  linkModule,
+  MessageGateway,
   MessagePortLike,
-  MessagingContext,
   ModuleExport,
   RemoteValue,
   TimeoutError,
-  useModule,
 } from ".";
-import { createMessageChannel } from "./messageChannel";
+import { createMessageChannel } from "./messaging";
 import {
   BehaviorSubject,
   firstValueFrom,
   Observable,
   ObservableLike,
 } from "./Observable";
-import { virtualConnection, virtualContext } from "./virtual";
+import { virtualChannel, virtualGateway } from "./virtual";
 
 declare namespace globalThis {
   const gc: () => void;
@@ -187,10 +187,10 @@ describe("transporter", () => {
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      within: portContext(p1),
+      using: portGateway(p1),
     });
 
-    const proxy = useModule<{
+    const proxy = linkModule<{
       a: ObservableLike<"a">;
       b: ObservableLike<"b">;
       c: () => "c";
@@ -210,10 +210,10 @@ describe("transporter", () => {
 
     createModule({
       export: { a: "a", b: "b", c: () => "c" },
-      within: portContext(p1),
+      using: portGateway(p1),
     });
 
-    const proxy = useModule<{
+    const proxy = linkModule<{
       a: ObservableLike<"a">;
       b: ObservableLike<"b">;
       c: () => "c";
@@ -441,26 +441,26 @@ describe("transporter", () => {
     expect(await proxy.call({ a: "a" })).toEqual({ a: "a" });
   });
 
-  test("namespaced modules in a single messaging context", async () => {
+  test("namespaced modules using the same message gateway", async () => {
     createModule({
       export: { default: "a" },
       namespace: "A",
-      within: virtualContext(),
+      using: virtualGateway(),
     });
 
     createModule({
       export: { default: "b" },
       namespace: "B",
-      within: virtualContext(),
+      using: virtualGateway(),
     });
 
-    const { default: A } = useModule<{ default: "a" }>({
-      from: virtualConnection(),
+    const { default: A } = linkModule<{ default: "a" }>({
+      from: virtualChannel(),
       namespace: "A",
     });
 
-    const { default: B } = useModule<{ default: "b" }>({
-      from: virtualConnection(),
+    const { default: B } = linkModule<{ default: "b" }>({
+      from: virtualChannel(),
       namespace: "B",
     });
 
@@ -468,20 +468,20 @@ describe("transporter", () => {
     expect(await firstValueFrom(B)).toEqual("b");
   });
 
-  test("using the same module more than once in a single messaging context", async () => {
+  test("linking the same module more than once", async () => {
     createModule({
       export: { default: "a" },
       namespace: "A",
-      within: virtualContext(),
+      using: virtualGateway(),
     });
 
-    const { default: A0 } = useModule<{ default: "a" }>({
-      from: virtualConnection(),
+    const { default: A0 } = linkModule<{ default: "a" }>({
+      from: virtualChannel(),
       namespace: "A",
     });
 
-    const { default: A1 } = useModule<{ default: "a" }>({
-      from: virtualConnection(),
+    const { default: A1 } = linkModule<{ default: "a" }>({
+      from: virtualChannel(),
       namespace: "A",
     });
 
@@ -492,11 +492,11 @@ describe("transporter", () => {
   test("bidirectional modules", async () => {
     const [p1, p2] = createMessageChannel();
 
-    createModule({ export: { default: "a" }, within: portContext(p1) });
-    createModule({ export: { default: "b" }, within: portContext(p2) });
+    createModule({ export: { default: "a" }, using: portGateway(p1) });
+    createModule({ export: { default: "b" }, using: portGateway(p2) });
 
-    const A = useModule<{ default: ObservableLike<"a"> }>({ from: p2 });
-    const B = useModule<{ default: ObservableLike<"b"> }>({ from: p1 });
+    const A = linkModule<{ default: ObservableLike<"a"> }>({ from: p2 });
+    const B = linkModule<{ default: ObservableLike<"b"> }>({ from: p1 });
 
     expect(await firstValueFrom(A.default)).toEqual("a");
     expect(await firstValueFrom(B.default)).toEqual("b");
@@ -509,7 +509,7 @@ describe("transporter", () => {
     createModule({
       export: { default: "a" },
       namespace: "A",
-      within: portContext(p1),
+      using: portGateway(p1),
     });
 
     const message = {
@@ -557,7 +557,7 @@ describe("transporter", () => {
     jest.useFakeTimers();
 
     const [, p2] = createMessageChannel();
-    const proxy = useModule({ from: p2, timeout: 1000 });
+    const proxy = linkModule({ from: p2, timeout: 1000 });
     const assertion = expect(proxy).rejects.toThrow(TimeoutError);
 
     jest.advanceTimersByTime(1000);
@@ -585,10 +585,10 @@ describe("transporter", () => {
 
     createModule({
       export: { default: () => () => "🥸" },
-      within: portContext(p1),
+      using: portGateway(p1),
     });
 
-    const proxy = useModule<{ default: () => () => string }>({
+    const proxy = linkModule<{ default: () => () => string }>({
       from: p2,
     });
 
@@ -624,10 +624,10 @@ function exportValue<T extends ModuleExport>(
   const { release } = createModule({
     export: { default: value },
     namespace,
-    within: portContext(p1),
+    using: portGateway(p1),
   });
 
-  const { default: remoteValue } = useModule<{ default: T }>({
+  const { default: remoteValue } = linkModule<{ default: T }>({
     from: p2,
     namespace,
   });
@@ -635,8 +635,8 @@ function exportValue<T extends ModuleExport>(
   return { proxy: remoteValue, release };
 }
 
-function portContext(port: MessagePortLike): MessagingContext {
-  return (createConnection) => createConnection(port);
+function portGateway(port: MessagePortLike): MessageGateway {
+  return (onConnect) => onConnect(port);
 }
 
 function scheduleTask<R>(callback?: () => R) {
