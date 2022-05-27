@@ -7,6 +7,12 @@ import { generateId } from "./uuid";
 
 const MESSAGE_SOURCE = "transporter::connect";
 
+export interface ConnectEvent {
+  readonly data: {
+    readonly portId: string;
+  };
+}
+
 enum MessageType {
   ConnectionCreated = "connection_created",
   CreateConnection = "create_connection",
@@ -69,29 +75,20 @@ export function createConnection({
   return port;
 }
 
-export function listenForConnection({
-  external,
-  internal,
+export function listenForConnection<E extends ConnectEvent>({
   onConnect,
   scope,
+  target,
 }: {
-  external: EventTargetLike;
-  internal: EventTargetLike;
-  onConnect(port: MessagePortLike): MessagePortLike | null;
+  onConnect(event: E): MessagePortLike | null;
   scope: string;
+  target: EventTargetLike;
 }): void {
-  internal.addEventListener<MessageEvent>("message", function onMessage(event) {
+  target.addEventListener<MessageEvent>("message", function onMessage(event) {
     const data = safeParse(event.data);
     if (!isCreateConnectionMessage(data, scope)) return;
 
-    const port = onConnect(
-      createMessagePort({
-        internal,
-        external,
-        portId: data.portId,
-      })
-    );
-
+    const port = onConnect({ ...event, data } as unknown as E);
     if (!port) return;
 
     const message: ConnectionCreatedMessage = {

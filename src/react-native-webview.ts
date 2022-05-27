@@ -1,8 +1,12 @@
 /// <reference lib="dom" />
 
 import { MessageEvent, MessageGateway, MessagePortLike } from ".";
-import { listenForConnection } from "./connect";
-import { createEventTarget, EventTargetLike } from "./messaging";
+import { createConnection, listenForConnection } from "./connect";
+import {
+  createEventTarget,
+  createMessagePort,
+  EventTargetLike,
+} from "./messaging";
 
 declare global {
   interface Window {
@@ -18,6 +22,26 @@ type ConnectProxy = (connection: {
 type ReactNativeWebView = {
   postMessage(message: string): void;
 };
+
+export function createChannel(
+  webView: ReactNativeWebView | undefined = self.ReactNativeWebView
+) {
+  const globalProxy = createEventTarget();
+
+  Array.of<EventTargetLike>(self, document).forEach((target) =>
+    target.addEventListener<MessageEvent>("message", (event) => {
+      globalProxy.dispatchEvent(
+        new MessageEvent("message", { data: event.data })
+      );
+    })
+  );
+
+  return createConnection({
+    internal: globalProxy,
+    external: proxyWebView(webView),
+    scope: "react_native",
+  });
+}
 
 export function webViewGateway({
   connect = ({ delegate }) => delegate(),
@@ -39,15 +63,30 @@ export function webViewGateway({
     // Android.
     Array.of<EventTargetLike>(self, document).forEach((target) =>
       listenForConnection({
-        onConnect(port) {
+        onConnect(event) {
+          const port = createMessagePort({
+            internal: target,
+            external: webViewProxy,
+            portId: event.data.portId,
+          });
+
           const portLike = connect({ delegate: () => port, port });
           portLike && onConnect(portLike);
           return portLike;
         },
-        internal: target,
-        external: webViewProxy,
         scope: "react_native_webview",
+        target,
       })
     );
   };
+}
+
+function proxyWebView(webView?: ReactNativeWebView) {
+  const webViewProxy = createEventTarget();
+
+  webViewProxy.addEventListener<MessageEvent>("message", ({ data }) =>
+    webView?.postMessage(data)
+  );
+
+  return webViewProxy;
 }
