@@ -1,5 +1,9 @@
-import { MessageGateway, MessagePortLike } from ".";
-import { createEventTarget, createMessageChannel } from "./messaging";
+import { MessageGateway } from ".";
+import {
+  createEventTarget,
+  createMessageChannel,
+  MessagePortLike,
+} from "./messaging";
 
 type ConnectProxy = (connection: {
   delegate(): MessagePortLike;

@@ -1,8 +1,13 @@
-import { MessageEvent, MessageGateway, MessagePortLike } from ".";
-import { createEventTarget, createMessagePort } from "./messaging";
-import { ConnectEvent, createConnection, listenForConnection } from "./connect";
+import { MessageGateway } from ".";
+import {
+  createEventTarget,
+  EventTargetLike,
+  MessageEvent,
+  MessagePortLike,
+} from "./messaging";
+import { createConnection, listenForConnection } from "./connect";
 
-interface NativeConnectEvent extends ConnectEvent {
+interface ConnectEvent extends MessageEvent {
   readonly source: ReactNativeWebView;
 }
 
@@ -21,7 +26,7 @@ type WebViewMessageEvent = {
 
 const nativeMessageTarget = createEventTarget();
 
-export function createChannel(webView: ReactNativeWebView) {
+export function createChannel(webView: ReactNativeWebView): MessagePortLike {
   return createConnection({
     internal: nativeMessageTarget,
     external: proxyWebView(webView),
@@ -50,26 +55,20 @@ export function nativeGateway({
 } = {}): MessageGateway {
   return (onConnect) =>
     listenForConnection({
-      onConnect(event: NativeConnectEvent) {
-        const port = createMessagePort({
-          internal: nativeMessageTarget,
-          external: proxyWebView(event.source),
-          portId: event.data.portId,
-        });
-
+      onConnect(event: ConnectEvent, createPort) {
+        const port = createPort(proxyWebView(event.source));
         const portLike = connect({ delegate: () => port, port });
         portLike && onConnect(portLike);
-        return portLike;
       },
       scope: "react_native",
       target: nativeMessageTarget,
     });
 }
 
-function proxyWebView(webView: ReactNativeWebView) {
+function proxyWebView(webView: ReactNativeWebView): EventTargetLike {
   const webViewProxy = createEventTarget();
 
-  webViewProxy.addEventListener<MessageEvent>("message", ({ data }) =>
+  webViewProxy.addEventListener("message", ({ data }) =>
     webView.postMessage(data)
   );
 

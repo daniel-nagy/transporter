@@ -1,7 +1,8 @@
 /// <reference lib="dom" />
 
-import { MessageGateway, MessagePortLike } from ".";
+import { MessageGateway } from ".";
 import { safeParse } from "./json";
+import { MessagePortLike } from "./messaging";
 import { isObject } from "./object";
 import { Queue } from "./Queue";
 

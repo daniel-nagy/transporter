@@ -1,5 +1,6 @@
 import { createRegistry } from "./FinalizationRegistry";
 import { safeParse } from "./json";
+import type { MessageEvent, MessagePortLike } from "./messaging";
 import { getIn, isObject, mapOwnProps, mapValues, ObjectPath } from "./object";
 import { Observable, ObservableLike } from "./Observable";
 import { generateId } from "./uuid";
@@ -82,18 +83,10 @@ type Message =
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 
-export type MessageEvent = { data: string };
 export type MessageGateway = (
   onConnect: (port: MessagePortLike) => void
 ) => void;
 
-export type MessagePortLike = {
-  addEventListener(type: "message", listener: MessageSubscriber): void;
-  postMessage(message: string): void;
-  removeEventListener(type: "message", listener: MessageSubscriber): void;
-};
-
-export type MessageSubscriber = (event: MessageEvent) => void;
 export type ModuleExport = Transportable | ObservableLike<Transportable>;
 export type ModuleExports = { [name: string]: ModuleExport };
 

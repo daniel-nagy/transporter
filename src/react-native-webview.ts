@@ -1,11 +1,12 @@
 /// <reference lib="dom" />
 
-import { MessageEvent, MessageGateway, MessagePortLike } from ".";
+import { MessageGateway } from ".";
 import { createConnection, listenForConnection } from "./connect";
 import {
   createEventTarget,
-  createMessagePort,
   EventTargetLike,
+  forwardEvent,
+  MessagePortLike,
 } from "./messaging";
 
 declare global {
@@ -28,11 +29,7 @@ const globalProxy = createEventTarget();
 // React Native WebView will send and receive messages from the document on
 // Android.
 Array.of<EventTargetLike>(self, document).forEach((target) =>
-  target.addEventListener<MessageEvent>("message", (event) => {
-    globalProxy.dispatchEvent(
-      new MessageEvent("message", { data: event.data })
-    );
-  })
+  forwardEvent("message", target, globalProxy)
 );
 
 export function createChannel(
@@ -56,16 +53,10 @@ export function webViewGateway({
 
   return (onConnect) => {
     listenForConnection({
-      onConnect(event) {
-        const port = createMessagePort({
-          internal: globalProxy,
-          external: proxyWebView(webView),
-          portId: event.data.portId,
-        });
-
+      onConnect(_event, createPort) {
+        const port = createPort(proxyWebView(webView));
         const portLike = connect({ delegate: () => port, port });
         portLike && onConnect(portLike);
-        return portLike;
       },
       scope: "react_native_webview",
       target: globalProxy,
@@ -76,7 +67,7 @@ export function webViewGateway({
 function proxyWebView(webView?: ReactNativeWebView) {
   const webViewProxy = createEventTarget();
 
-  webViewProxy.addEventListener<MessageEvent>("message", ({ data }) =>
+  webViewProxy.addEventListener("message", ({ data }) =>
     webView?.postMessage(data)
   );
 

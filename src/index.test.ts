@@ -2,12 +2,11 @@ import {
   createModule,
   linkModule,
   MessageGateway,
-  MessagePortLike,
   ModuleExport,
   RemoteValue,
   TimeoutError,
 } from ".";
-import { createMessageChannel } from "./messaging";
+import { createMessageChannel, MessagePortLike } from "./messaging";
 import {
   BehaviorSubject,
   firstValueFrom,

@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 
-import { MessageGateway, MessagePortLike } from ".";
+import { MessageGateway } from ".";
+import { MessagePortLike } from "./messaging";
 
 type ConnectProxy = (connection: {
   delegate(): MessagePortLike;
