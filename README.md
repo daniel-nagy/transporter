@@ -35,9 +35,9 @@ createModule({ export: { add, subtract } });
 Our worker code creates a module and exports 2 functions `add` and `subtract`.
 
 ```typescript
-import { useModule } from "@boulevard/transporter";
+import { linkModule } from "@boulevard/transporter";
 
-const { add, subtract } = useModule({
+const { add, subtract } = linkModule({
   from: new Worker("math.js", { type: "module" }),
 });
 
@@ -49,7 +49,7 @@ const main = async () => {
 main();
 ```
 
-Our application code requires this module by calling `useModule` on our worker. Notice when our application invokes a function exported by our worker it must `await` the response. When we invoke a function exported by our worker that function will be evaluated inside the worker. If we want the return value of the function we must wait for the result to be returned from the worker thread.
+Our application code links this module by calling `linkModule` on our worker. Notice when our application invokes a function exported by our worker it must `await` the response. When we invoke a function exported by our worker that function will be evaluated inside the worker. If we want the return value of the function we must wait for the result to be returned from the worker thread.
 
 ## API
 
@@ -62,13 +62,13 @@ createModule<T extends ModuleExports>({
   export: T,
   namespace: Nullable<string> = null,
   timeout: number = 1000,
-  within: MessagingContext = defaultMessagingContext
+  using: MessageGateway = defaultMessageGateway
 }): {
   release(): void
 };
 ```
 
-Create a new module and define its exports. Modules exist within 1 or more messaging contexts. See the [`MessagingContext`](#messagingcontext) type for more info. You may provide a namespace to avoid collision with other modules within the same messaging context. It is recommended to always namespace your modules.
+Create a new module and define its exports. Modules can be linked using 1 or more message gateways. See the [`MessageGateway`](#messagegateway) type for more info. You may provide a namespace to avoid collision with other modules using the same message gateway. It is recommended to always namespace your modules.
 
 Module exports should be considered final. You can use observables to export values that may change overtime. All exports must be named. Anonymous default exports are not allowed. If an exported value is neither a function nor an observable it will be wrapped in an observable that emits the value and then completes.
 
@@ -107,17 +107,17 @@ createModule({ export: { darkMode: darkMode.asObservable() } });
 darkMode.next(true);
 ```
 
-#### `useModule`
+#### `linkModule`
 
 ```typescript
-useModule<T extends ModuleExports>({
+linkModule<T extends ModuleExports>({
   from: MessagePortLike,
   namespace: Nullable<string> = null,
   timeout: number = 1000
 }): RemoteModule<T>;
 ```
 
-Use a remote module connected via a message channel. The namespace should match the namespace of the remote module.
+Link a remote module using a message channel. The namespace should match the namespace of the remote module.
 
 Returns a remote module. A remote module may export functions or observables. Calling a remote function will return a promise.
 
@@ -136,15 +136,15 @@ type Crypto = {
   encrypt(value: string): string;
 };
 
-const Auth = useModule<Auth>({
-  from: browserConnection({
+const Auth = linkModule<Auth>({
+  from: browserChannel({
     origin: "https://trusted.com",
     window: self.parent,
   }),
   namespace: "Auth",
 });
 
-const Crypto = useModule<Crypto>({ from: new Worker("crypto.0beec7b.js") });
+const Crypto = linkModule<Crypto>({ from: new Worker("crypto.0beec7b.js") });
 
 const { apiToken } = await Auth.login("chow", await Crypto.encrypt("bologna1"));
 ```
@@ -152,14 +152,14 @@ const { apiToken } = await Auth.login("chow", await Crypto.encrypt("bologna1"));
 You can get the value of an observable imperatively using the `firstValueFrom` function exported by Transporter. It is advised to only use `firstValueFrom` if you are sure the observable will emit a value, otherwise your program may hang indefinitely.
 
 ```typescript
-const { definitelyEmits } = useModule({ from: browserConnection(self.parent) });
+const { definitelyEmits } = linkModule({ from: browserChannel(self.parent) });
 const value = await firstValueFrom(definitelyEmits);
 ```
 
 You can subscribe to an observable to receive new values overtime.
 
 ```typescript
-const { darkMode } = useModule({ from: browserConnection(self.parent) });
+const { darkMode } = linkModule({ from: browserChannel(self.parent) });
 darkMode.subscribe(onDarkModeChange);
 ```
 
@@ -179,40 +179,33 @@ A message port is a private connection between 2 message targets. Because the co
 
 Internally Transporter will serialize and deserialize all transported values to and from JSON. While some message targets can send and receive types other than `string`, using strings enables interop with more systems. At the moment this is opaque but it would be possible to add an API to intercept messages and provide custom logic.
 
-#### `MessagingContext`
+#### `MessageGateway`
 
 ```typescript
-type MessagingContext = (
-  createConnection: (port: MessagePortLike) => void
-) => void;
+type MessageGateway = (onConnect: (port: MessagePortLike) => void) => void;
 ```
 
-A messaging context is responsible for creating a private channel between 2 message targets. This allows Transporter to be agnostic of how the channel is created since Transporter cannot possibly know how every message channel is created.
+A message gateway is responsible for linking modules. This allows Transporter to be agnostic of how the channel is created since Transporter cannot possibly know how every message channel is created.
 
-Transporter provides some useful messaging contexts for things like browser windows and Web workers. However, it is possible to create your own messaging contexts. For example, an HTTP context, a Websocket context, a React Native Webview context, etc.
+Transporter provides some useful message gateways for browser windows, shared Web workers, and React Native. However, it is possible to create your own message gateways. For example, you could create an HTTP gateway or a Websocket gateway.
 
-Every module exists within 1 or more messaging contexts. If you do not specify a messaging context then the default messaging context is used. The default messaging context treats the global scope as a message port. Because the global scope of a dedicated Web worker behaves like a message port the default messaging context works with Web workers.
+Every module is connected via 1 or more message gateways. If you do not specify a message gateway then the default message gateway is used. The default message gateway treats the global scope as a message port. Because the global scope of a dedicated Web worker behaves like a message port the default message gateway works with Web workers.
 
 ##### Example
 
 ```typescript
-createModule({ export: { default: "👾" }, within: browserContext() });
-createModule({ export: { default: "🛸" }, within: sharedWorkerContext() });
-
-// Not included with Transporter...yet
-createModule({
-  export: { default: "⚛️" },
-  within: reactNativeWebviewContext(),
-});
+createModule({ export: { default: "👾" }, using: browserGateway() });
+createModule({ export: { default: "🛸" }, using: sharedWorkerGateway() });
+createModule({ export: { default: "⚛️" }, using: webViewGateway() });
 ```
 
-The messaging contexts provided by Transporter allow you to intercept the connection before it is created. This could be useful for proxying the message port or rejecting connections from an unknown origin. To prevent the connection from being created return `null` from the `createConnection` function.
+The message gateways provided by Transporter allow you to intercept the connection before it is created. This could be useful for proxying the message port or rejecting connections from an unknown origin. To prevent the connection from being created return `null` from the `connect` function.
 
 ```typescript
 createModule({
   export: { default: "👾" },
-  within: browserContext({
-    createConnection({ delegate, origin }) {
+  using: browserGateway({
+    connect({ delegate, origin }) {
       return new URL(origin).hostname.endsWith("trusted.com")
         ? delegate()
         : null;
@@ -253,25 +246,21 @@ If a value cannot be serialized, such as a function, the value is proxied. Howev
 
 ### Composing React Apps
 
-Transporter can be used to easily compose React applications in different browsing contexts. Here is an example app that has a reusable `<MicroApp />` component that renders a remote React app that exports a `render` method.
+Transporter can be used to easily compose React applications in iframes or React Native Webviews. Here is an example app that has a reusable `<MicroApp />` component that renders a React app that exports a `render` method inside an iframe.
 
-```typescript
-import { useModule } from "@boulevard/transporter";
-import { browserConnection } from "@boulevard/transporter/browser";
+```tsx
+import { linkModule } from "@boulevard/transporter";
+import { browserChannel } from "@boulevard/transporter/browser";
 import { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
-const MicroApp = <T>({ namespace, src, ...props }: MicroApp.Props<T>) => {
+const MicroApp = <T,>({ namespace, src, ...props }: MicroApp.Props<T>) => {
   const [App, setApp] = useState(null);
 
-  const onLoad = ({ currentTarget: frame }) => {
+  const onLoad = ({ currentTarget: frame }) =>
     setApp(() =>
-      useModule({
-        from: browserConnection(frame.contentWindow),
-        namespace,
-      })
+      linkModule({ from: browserChannel(frame.contentWindow), namespace })
     );
-  };
 
   useEffect(() => {
     App?.render(props);
@@ -300,9 +289,9 @@ Notice that we called `setApp` with a function that returns our module. Otherwis
 
 And here is the implementation of the micro app.
 
-```typescript
+```tsx
 import { createModule } from "@boulevard/transporter";
-import { browserContext } from "@boulevard/transporter/browser";
+import { browserGateway } from "@boulevard/transporter/browser";
 import { createRoot } from "react-dom/client";
 
 const App = ({ count, increment }) => (
@@ -318,7 +307,7 @@ const render = (props) => Root.render(<App {...props} />);
 createModule({
   export: { render },
   namespace: "CounterApp",
-  within: browserContext(),
+  using: browserGateway(),
 });
 ```
 
