@@ -9,6 +9,7 @@ Transporter enables inter-process communication using remote method invocation. 
 #### Contents
 
 - [Introduction](#introduction)
+- [Install](#install)
 - [API](#api)
   - [Functions](#functions)
   - [Types](#types)
@@ -50,6 +51,16 @@ main();
 ```
 
 Our application code links this module by calling `linkModule` on our worker. Notice when our application invokes a function exported by our worker it must `await` the response. When we invoke a function exported by our worker that function will be evaluated inside the worker. If we want the return value of the function we must wait for the result to be returned from the worker thread.
+
+## Install
+
+Transporter is available from the npm registry.
+
+> Transporter is currently in beta. Expect breaking API changes.
+
+```
+npm add @boulevard/transporter
+```
 
 ## API
 
