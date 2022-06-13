@@ -18,7 +18,8 @@
     "transport"
   ],
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "registry": "https://registry.npmjs.org"
   },
   "scripts": {
     "prebuild": "yarn clean",
