@@ -1,15 +1,13 @@
 import { createRegistry } from "./FinalizationRegistry";
 import { safeParse } from "./json";
-import type { MessageEvent, MessagePortLike } from "./messaging";
 import { getIn, isObject, mapOwnProps, mapValues, ObjectPath } from "./object";
-import { Observable, ObservableLike } from "./Observable";
+import { flatMap, map, Observable, ObservableLike } from "./Observable";
 import { generateId } from "./uuid";
 
 // Do not assume a specific JavaScript runtime. However, require these global
 // types.
 declare type Timeout = unknown;
 declare const clearTimeout: (timeout: Timeout) => void;
-declare const self: MessagePortLike;
 declare const setTimeout: (
   callback: Function,
   delay?: number,
@@ -29,9 +27,9 @@ enum MessageType {
 
 interface IMessage {
   readonly id: string;
-  readonly scope: string | null;
   readonly source: typeof MESSAGE_SOURCE;
   readonly type: MessageType;
+  readonly uri: string;
 }
 
 interface ICallFunctionMessage extends IMessage {
@@ -62,17 +60,7 @@ interface ISetValueMessage extends IMessage {
   readonly value: Transportable;
 }
 
-type Channel = {
-  readonly port: MessagePortLike;
-  readonly scope: string | null;
-  readonly timeout: number;
-};
-
-type EncodedFunction = {
-  scope: string;
-  type: "function";
-};
-
+type EncodedFunction = { type: "function"; uri: string };
 type EncodedUndefined = { type: "undefined" };
 type Message =
   | ICallFunctionMessage
@@ -83,30 +71,47 @@ type Message =
   | ISetValueMessage;
 type Promisify<T> = [T] extends Promise<unknown> ? T : Promise<T>;
 
-export type MessageGateway = (
-  onConnect: (port: MessagePortLike) => void
-) => void;
-
-export type ModuleExport = Transportable | ObservableLike<Transportable>;
-export type ModuleExports = { [name: string]: ModuleExport };
+export type Client = {
+  link<T extends ServiceAPI>(uri: string): RemoteService<T>;
+};
 
 export type RemoteFunction<T> = T extends (...args: infer A) => infer R
   ? // @ts-expect-error Type 'R' does not satisfy the constraint 'Transportable'.
     (...args: A /* Transportable[] */) => Promisify<Transported<R>>
   : never;
 
-export type RemoteValue<T extends ModuleExport> = T extends ObservableLike<
-  infer U
->
-  ? // @ts-expect-error Type 'U' does not satisfy the constraint 'Transportable'.
-    ObservableLike<Transported<U>>
-  : T extends TransportableFunction
-  ? RemoteFunction<T>
-  : // @ts-expect-error Type 'T' does not satisfy the constraint 'Transportable'.
-    ObservableLike<Transported<T>>;
+export type RemoteValue<T extends ServiceAPI[keyof ServiceAPI]> =
+  T extends ObservableLike<infer U>
+    ? // @ts-expect-error Type 'U' does not satisfy the constraint 'Transportable'.
+      ObservableLike<Transported<U>>
+    : T extends TransportableFunction
+    ? RemoteFunction<T>
+    : // @ts-expect-error Type 'T' does not satisfy the constraint 'Transportable'.
+      ObservableLike<Transported<T>>;
 
-export type RemoteModule<T extends ModuleExports> = {
+export type RemoteService<T extends ServiceAPI> = {
   [key in keyof T]: RemoteValue<T[key]>;
+};
+
+export type Route = { readonly path: string; readonly provide: Service };
+export type Router = readonly Route[];
+export type Server = { stop(): void };
+
+export type Service = {
+  [name: string]: ObservableLike<Transportable> | TransportableFunction;
+};
+
+export type ServiceAPI = {
+  [name: string]: Transportable | ObservableLike<Transportable>;
+};
+
+export type SessionManager = {
+  connect: ObservableLike<SessionPort>;
+};
+
+export type SessionPort = {
+  receive: ObservableLike<string>;
+  send(message: string): void;
 };
 
 export type Transportable =
@@ -145,35 +150,140 @@ export class TimeoutError extends Error {
   }
 }
 
-export const defaultMessageGateway: MessageGateway = (onConnect) =>
-  onConnect(self);
-
-const registry = createRegistry<Channel>((channel) => {
-  channel.port.postMessage(
+const registry = createRegistry<{
+  port: SessionPort;
+  timeout?: number;
+  uri: string;
+}>(({ port, timeout, uri }) => {
+  port.send(
     encode({
-      channel,
       message: {
         id: generateId(),
-        scope: channel.scope,
         source: MESSAGE_SOURCE,
         type: MessageType.GarbageCollect,
+        uri,
       },
+      port,
+      timeout,
     })
   );
 });
 
-export function createModule<T extends ModuleExports>({
-  export: api,
-  namespace: scope = null,
-  timeout = 1000,
-  using: gateway = defaultMessageGateway,
+export function createClient({
+  port,
+  timeout,
 }: {
-  export: T;
-  namespace?: string | null;
+  port: SessionPort;
   timeout?: number;
-  using?: MessageGateway | MessageGateway[];
-}): { release(): void } {
-  const _exports = mapOwnProps(api, (value) => {
+}): Client {
+  return {
+    link(uri: string) {
+      return createProxy({ port, timeout, uri });
+    },
+  };
+}
+
+export function createServer({
+  router,
+  scheme,
+  sessionManagers,
+  timeout,
+}: {
+  router: Router;
+  scheme: string;
+  sessionManagers: [SessionManager, ...SessionManager[]];
+  timeout?: number;
+}): Server {
+  const connections = sessionManagers.map((sessionManager) =>
+    router.map(({ path, provide: service }) => {
+      const matches = (uri: string): boolean => {
+        const [uriScheme, uriPath = ""] = uri.split(":");
+
+        return (
+          uriScheme === scheme &&
+          trimStart(uriPath, "/") === trimStart(path, "/")
+        );
+      };
+
+      const observable = flatMap(sessionManager.connect, (port) => {
+        return map(port.receive, (data) => [port, data] as const);
+      });
+
+      const { unsubscribe } = observable.subscribe(async ([port, data]) => {
+        const parsedData = safeParse(data);
+
+        if (!isMessage(parsedData) || !matches(parsedData.uri)) return;
+
+        const message = decode({ message: parsedData, port, timeout });
+
+        switch (message.type) {
+          case MessageType.Call:
+            try {
+              port.send(
+                encode({
+                  message: {
+                    id: message.id,
+                    source: MESSAGE_SOURCE,
+                    type: MessageType.Set,
+                    uri: message.uri,
+                    value: await callFunction(
+                      service,
+                      message.path,
+                      message.args
+                    ),
+                  },
+                  port,
+                  timeout,
+                })
+              );
+            } catch (exception) {
+              port.send(
+                encode({
+                  message: {
+                    error: exception as Transportable,
+                    id: message.id,
+                    source: MESSAGE_SOURCE,
+                    type: MessageType.Error,
+                    uri: message.uri,
+                  },
+                  port,
+                  timeout,
+                })
+              );
+            }
+            break;
+          case MessageType.GarbageCollect:
+            unsubscribe();
+            break;
+          case MessageType.Ping:
+            port.send(
+              encode({
+                message: {
+                  id: message.id,
+                  source: MESSAGE_SOURCE,
+                  type: MessageType.Pong,
+                  uri: message.uri,
+                },
+                port,
+                timeout,
+              })
+            );
+            break;
+          default:
+          // no default
+        }
+      });
+      return unsubscribe;
+    })
+  );
+
+  return {
+    stop: () => flatten(connections).forEach((disconnect) => disconnect()),
+  };
+}
+
+export function createService<T extends ServiceAPI>(api: T): Service {
+  return mapOwnProps(api, (value) => {
     switch (true) {
       case isFunction(value):
         return value;
@@ -183,127 +293,40 @@ export function createModule<T extends ModuleExports>({
         return Observable.of(value);
     }
   });
-
-  const portSubscriptions: (() => void)[] = [];
-  const releaseAll = () => portSubscriptions.forEach((release) => release());
-
-  flatten([gateway]).forEach((gateway) =>
-    gateway((port) => {
-      const channel = { port, scope, timeout };
-      const release = () => port.removeEventListener("message", onMessage);
-
-      async function onMessage(event: MessageEvent) {
-        const data = safeParse(event.data);
-
-        if (!isMessage(data) || data.scope !== scope) return;
-
-        const message = decode({ channel, message: data });
-
-        switch (message.type) {
-          case MessageType.Call:
-            try {
-              port.postMessage(
-                encode({
-                  channel,
-                  message: {
-                    id: message.id,
-                    scope,
-                    source: MESSAGE_SOURCE,
-                    type: MessageType.Set,
-                    value: await callFunction(
-                      _exports,
-                      message.path,
-                      message.args
-                    ),
-                  },
-                })
-              );
-            } catch (exception) {
-              port.postMessage(
-                encode({
-                  channel,
-                  message: {
-                    id: message.id,
-                    scope,
-                    source: MESSAGE_SOURCE,
-                    type: MessageType.Error,
-                    error: exception as Transportable,
-                  },
-                })
-              );
-            }
-            break;
-          case MessageType.GarbageCollect:
-            release();
-            break;
-          case MessageType.Ping:
-            port.postMessage(
-              encode({
-                channel,
-                message: {
-                  id: message.id,
-                  scope,
-                  source: MESSAGE_SOURCE,
-                  type: MessageType.Pong,
-                },
-              })
-            );
-            break;
-          default:
-          // no default
-        }
-      }
-
-      port.addEventListener("message", onMessage);
-      portSubscriptions.push(release);
-    })
-  );
-
-  return { release: releaseAll };
-}
-
-export function linkModule<T extends ModuleExports>({
-  from: port,
-  namespace: scope = null,
-  timeout = 1000,
-}: {
-  from: MessagePortLike;
-  namespace?: string | null;
-  timeout?: number;
-}): RemoteModule<T> {
-  return createProxy({ channel: { port, scope, timeout } });
 }
 
 function awaitResponse<T extends Transportable>({
-  channel,
   message,
+  port,
+  timeout = 1000,
 }: {
-  channel: Channel;
   message: Message;
+  port: SessionPort;
+  timeout?: number;
 }): Promise<T> {
   return new Promise<T>((resolve, reject) => {
-    const { id, scope } = message;
-    const { cancel: cancelTimeout } = schedule(channel.timeout, () =>
+    const { id, uri } = message;
+    const { cancel: cancelTimeout } = schedule(timeout, () =>
       reject(new TimeoutError("Connection timeout."))
     );
 
-    channel.port.addEventListener("message", function onMessage(event) {
-      const data = safeParse(event.data);
+    const { unsubscribe } = port.receive.subscribe((data) => {
+      const parsedData = safeParse(data);
 
-      if (!isMessage(data) || data.id !== id) return;
+      if (!isMessage(parsedData) || parsedData.id !== id) return;
 
-      const message = decode({ channel, message: data });
+      const message = decode({ message: parsedData, port, timeout });
 
       switch (message.type) {
         case MessageType.Pong:
           cancelTimeout();
           break;
         case MessageType.Set:
-          channel.port.removeEventListener("message", onMessage);
+          unsubscribe();
           resolve(message.value as T);
           break;
         case MessageType.Error:
-          channel.port.removeEventListener("message", onMessage);
+          unsubscribe();
           reject(message.error);
           break;
         default:
@@ -311,38 +334,61 @@ function awaitResponse<T extends Transportable>({
       }
     });
 
-    channel.port.postMessage(
+    port.send(
       encode({
-        channel,
-        message: { id, scope, source: MESSAGE_SOURCE, type: MessageType.Ping },
+        message: {
+          id,
+          source: MESSAGE_SOURCE,
+          type: MessageType.Ping,
+          uri,
+        },
+        port,
+        timeout,
       })
     );
 
-    channel.port.postMessage(encode({ channel, message }));
+    port.send(encode({ message, port, timeout }));
   });
 }
 
-function createProxy<T extends ModuleExports>({
-  channel,
+function callFunction(
+  from: Service,
+  path: ObjectPath,
+  args: Transportable[]
+): Transportable | Promise<Transportable> {
+  const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
+
+  return name
+    ? (getIn(from, subpath) as any)[name]?.(...args)
+    : (getIn(from, path) as Function)(...args);
+}
+
+function createProxy<T extends ServiceAPI>({
   path = [],
+  port,
   promiseLike = false,
+  timeout,
+  uri,
 }: {
-  channel: Channel;
   path?: ObjectPath;
+  port: SessionPort;
   promiseLike?: boolean;
-}): RemoteModule<T> {
-  return new Proxy((() => {}) as unknown as RemoteModule<T>, {
+  timeout?: number;
+  uri: string;
+}): RemoteService<T> {
+  return new Proxy((() => {}) as unknown as RemoteService<T>, {
     apply(_target, _thisArg, args) {
       return awaitResponse({
-        channel,
         message: {
           args,
           id: generateId(),
           path,
-          scope: channel.scope,
           source: MESSAGE_SOURCE,
           type: MessageType.Call,
+          uri,
         },
+        port,
+        timeout,
       });
     },
     get(_target, prop, _receiver) {
@@ -355,7 +401,12 @@ function createProxy<T extends ModuleExports>({
         case prop === "toJSON":
           return undefined;
         default:
-          return createProxy({ channel, path: [...path, prop as string] });
+          return createProxy({
+            path: [...path, prop as string],
+            port,
+            timeout,
+            uri,
+          });
       }
     },
     ownKeys(_target) {
@@ -368,19 +419,19 @@ function createProxy<T extends ModuleExports>({
 }
 
 function decode({
-  channel,
   message,
+  port,
+  timeout,
 }: {
-  channel: Channel;
   message: Message;
+  port: SessionPort;
+  timeout?: number;
 }): Message {
   return mapValues(message, (value) => {
     switch (true) {
       case isEncodedFunction(value): {
-        const proxy = createProxy({
-          channel: { ...channel, scope: value.scope },
-        }).default;
-        registry?.register(proxy, { ...channel, scope: value.scope });
+        const proxy = createProxy({ port, timeout, uri: value.uri }).default;
+        registry?.register(proxy, { port, timeout, uri: value.uri });
         return proxy;
       }
       case isEncodedUndefined(value): {
@@ -392,19 +443,28 @@ function decode({
   });
 }
 
-function encode({ channel, message }: { channel: Channel; message: Message }) {
+function encode({
+  message,
+  port,
+  timeout,
+}: {
+  message: Message;
+  port: SessionPort;
+  timeout?: number;
+}) {
   return JSON.stringify(message, (_key, value) => {
     switch (typeof value) {
       case "function": {
-        const scope = generateId();
+        const scheme = generateId();
 
-        createModule({
-          export: { default: value },
-          namespace: scope,
-          using: (onConnect) => onConnect(channel.port),
+        createServer({
+          router: [{ path: "/", provide: createService({ default: value }) }],
+          scheme,
+          sessionManagers: [{ connect: Observable.of(port) }],
+          timeout,
         });
 
-        return { scope, type: "function" };
+        return { type: "function", uri: scheme } as EncodedFunction;
       }
       case "undefined":
         return { type: "undefined" };
@@ -412,18 +472,6 @@ function encode({ channel, message }: { channel: Channel; message: Message }) {
         return value;
     }
   });
-}
-
-function callFunction(
-  from: ModuleExports,
-  path: ObjectPath,
-  args: Transportable[]
-): Transportable | Promise<Transportable> {
-  const [subpath, name] = [path.slice(0, -1), ...path.slice(-1)];
-
-  return name
-    ? (getIn(from, subpath) as any)[name]?.(...args)
-    : (getIn(from, path) as Function)(...args);
 }
 
 function flatten<T>(list: ReadonlyArray<T | ReadonlyArray<T>>): T[] {
@@ -456,4 +504,8 @@ function isObservableLike(value: unknown): value is ObservableLike<any> {
 function schedule(time: number, callback: () => void): { cancel(): void } {
   const id = setTimeout(callback, time);
   return { cancel: () => clearTimeout(id) };
+}
+
+function trimStart(string: string, char: string): string {
+  return string.startsWith(char) ? string.slice(1) : string;
 }

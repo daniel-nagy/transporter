@@ -1,17 +1,10 @@
-import {
-  createMessagePort,
-  EventTargetLike,
-  filterEvent,
-  forwardEvent,
-  mapEvent,
-  MessageEvent,
-  MessagePortLike,
-  proxy,
-  proxyEvent,
-} from "./messaging";
-import { safeParse } from "./json";
+import { SessionPort } from ".";
+import type { Event } from "./event-target";
+import { JSON, safeParse } from "./json";
 import { isObject } from "./object";
+import { filter, map, ObservableLike, Subject, take, tap } from "./Observable";
 import { Queue } from "./Queue";
+import { Sequence } from "./Sequence";
 import { generateId } from "./uuid";
 
 const MESSAGE_SOURCE = "transporter::connect";
@@ -36,15 +29,19 @@ type CreateConnectionMessage = {
 
 type Message = ConnectionCreatedMessage | CreateConnectionMessage;
 
+export interface MessageEvent<T = any> extends Event {
+  data: T;
+}
+
 export function createConnection({
   external,
   internal,
   scope,
 }: {
-  external: EventTargetLike;
-  internal: EventTargetLike;
+  external: Subject<string>;
+  internal: ObservableLike<MessageEvent>;
   scope: string;
-}): MessagePortLike {
+}): SessionPort {
   const portId = generateId();
 
   const message: CreateConnectionMessage = {
@@ -54,25 +51,33 @@ export function createConnection({
     type: MessageType.CreateConnection,
   };
 
-  external.dispatchEvent({ data: JSON.stringify(message), type: "message" });
-
-  const port = connect({ external, internal, portId });
+  external.next(JSON.stringify(message));
 
   let connected = false;
   let messageQueue: Queue<string> | null = new Queue<string>();
 
-  port.addEventListener("message", function onMessage(event) {
-    if (!isConnectionCreatedMessage(safeParse(event.data), scope)) return;
-    port.removeEventListener("message", onMessage);
-    connected = true;
-    messageQueue?.drain((message) => port.postMessage(message));
-    messageQueue = null;
-  });
-
-  return proxy(port, {
-    postMessage: (port, message) =>
-      connected ? port.postMessage(message) : messageQueue?.push(message),
-  });
+  return Sequence.of(createPort(internal, external))
+    .pipe(proxyPort(portId))
+    .tap((port) =>
+      Sequence.of(port.receive)
+        .pipe((observable) => map(observable, safeParse))
+        .pipe((observable) =>
+          filter(observable, isConnectionCreatedMessage(scope))
+        )
+        .pipe((observable) => take(observable, 1))
+        .fold()
+        .subscribe(() => {
+          connected = true;
+          messageQueue?.drain((message) => port.send(message));
+          messageQueue = null;
+        })
+    )
+    .pipe((port) => ({
+      ...port,
+      send: (message: string) =>
+        connected ? port.send(message) : messageQueue?.push(message),
+    }))
+    .fold();
 }
 
 export function listenForConnection<E extends MessageEvent>({
@@ -80,74 +85,79 @@ export function listenForConnection<E extends MessageEvent>({
   scope,
   target,
 }: {
-  onConnect(
-    event: E,
-    createPort: (link: EventTargetLike) => MessagePortLike
-  ): void;
+  onConnect(event: E): SessionPort | null;
   scope: string;
-  target: EventTargetLike;
-}): void {
-  target.addEventListener("message", function onMessage(event) {
-    const data = safeParse(event.data);
-    if (!isCreateConnectionMessage(data, scope)) return;
+  target: ObservableLike<MessageEvent>;
+}): ObservableLike<SessionPort> {
+  return Sequence.of(target)
+    .pipe((observable) => map(observable, safeParseEventData))
+    .pipe((observable) => filter(observable, isCreateConnectionEvent<E>(scope)))
+    .pipe((observable) =>
+      map(observable, (event) => {
+        const port = onConnect(event);
+        return port && proxyPort(event.data.portId)(port);
+      })
+    )
+    .pipe((observable) =>
+      filter(observable, (port): port is SessionPort => Boolean(port))
+    )
+    .pipe((observable) =>
+      tap(observable, (port) => {
+        const message: ConnectionCreatedMessage = {
+          scope,
+          source: MESSAGE_SOURCE,
+          type: MessageType.ConnectionCreated,
+        };
 
-    onConnect(event as E, (link: EventTargetLike) => {
-      const port = connect({
-        external: link,
-        internal: target,
-        portId: data.portId,
-      });
+        port.send(JSON.stringify(message));
+      })
+    )
+    .fold();
+}
 
-      const message: ConnectionCreatedMessage = {
-        scope,
-        source: MESSAGE_SOURCE,
-        type: MessageType.ConnectionCreated,
-      };
+export function createPort(
+  receiveFrom: ObservableLike<MessageEvent>,
+  sendTo: Subject<string>
+): SessionPort {
+  return {
+    receive: map(receiveFrom, (event) => event.data),
+    send: (message) => sendTo.next(message),
+  };
+}
 
-      port.postMessage(JSON.stringify(message));
+function proxyPort(portId: string) {
+  type MessageProxy = { message: string; portId: string };
 
-      return port;
-    });
+  const isMessageProxy =
+    (portId: string) =>
+    (message: JSON): message is MessageProxy =>
+      isObject(message) && message.portId === portId;
+
+  return (port: SessionPort): SessionPort => ({
+    receive: Sequence.of(port.receive)
+      .pipe((observable) => map(observable, safeParse))
+      .pipe((observable) => filter(observable, isMessageProxy(portId)))
+      .pipe((observable) => map(observable, ({ message }) => message))
+      .fold(),
+    send: (message: string) => port.send(JSON.stringify({ message, portId })),
   });
 }
 
-function connect({
-  external,
-  internal,
-  portId,
-}: {
-  external: EventTargetLike;
-  internal: EventTargetLike;
-  portId: string;
-}): MessagePortLike {
-  const port = createMessagePort(
-    proxyEvent("message", external, wrapMessage(portId))
-  );
-
-  Array.of(internal)
-    .map((target) => filterEvent("message", target, isMessageProxy(portId)))
-    .map((target) => mapEvent("message", target, unwrapMessage))
-    .map((target) => forwardEvent("message", target, port));
-
-  return port;
+function isConnectionCreatedMessage(scope: string) {
+  return (message: unknown): message is ConnectionCreatedMessage =>
+    isMessage(message, scope) && message.type === MessageType.ConnectionCreated;
 }
 
-function isConnectionCreatedMessage(
-  message: unknown,
-  scope: string
-): message is ConnectionCreatedMessage {
+function isCreateConnectionEvent<E extends MessageEvent>(scope: string) {
   return (
-    isMessage(message, scope) && message.type === MessageType.ConnectionCreated
-  );
+    event: MessageEvent<JSON>
+  ): event is MessageEvent<CreateConnectionMessage> & E =>
+    isCreateConnectionMessage(scope)(event.data);
 }
 
-function isCreateConnectionMessage(
-  message: unknown,
-  scope: string
-): message is CreateConnectionMessage {
-  return (
-    isMessage(message, scope) && message.type === MessageType.CreateConnection
-  );
+function isCreateConnectionMessage(scope: string) {
+  return (message: unknown): message is CreateConnectionMessage =>
+    isMessage(message, scope) && message.type === MessageType.CreateConnection;
 }
 
 function isMessage(message: unknown, scope: string): message is Message {
@@ -158,20 +168,6 @@ function isMessage(message: unknown, scope: string): message is Message {
   );
 }
 
-function isMessageProxy(portId: string) {
-  return (event: MessageEvent) => {
-    const message = safeParse(event.data);
-    return isObject(message) && message.portId === portId;
-  };
-}
-
-function unwrapMessage(event: MessageEvent) {
-  return { type: "message", data: JSON.parse(event.data).message };
-}
-
-function wrapMessage(portId: string) {
-  return (event: MessageEvent) => ({
-    ...event,
-    data: JSON.stringify({ message: event.data, portId }),
-  });
+function safeParseEventData(event: MessageEvent): MessageEvent<JSON> {
+  return { ...event, data: safeParse(event.data) };
 }

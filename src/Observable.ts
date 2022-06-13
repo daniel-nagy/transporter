@@ -1,3 +1,5 @@
+import type { Event, EventTargetLike } from "./event-target";
+
 export class EmptyError extends Error {
   readonly name = "EmptyError";
 
@@ -199,6 +201,20 @@ export class BehaviorSubject<T> extends Subject<T> {
   }
 }
 
+export function filter<T, S extends T>(
+  observable: ObservableLike<T>,
+  callback: ((value: T) => value is S) | ((value: T) => boolean)
+): ObservableLike<S> {
+  return new Observable((observer) => {
+    const innerSubscription = observable.subscribe({
+      ...observer,
+      next: (value) => callback(value) && observer.next(value),
+    });
+
+    return () => innerSubscription.unsubscribe();
+  });
+}
+
 export function firstValueFrom<T>(observable: ObservableLike<T>) {
   return new Promise<T>((resolve, reject) =>
     observable.subscribe({
@@ -210,6 +226,113 @@ export function firstValueFrom<T>(observable: ObservableLike<T>) {
       error: reject,
     })
   );
+}
+
+export function flatMap<T, U>(
+  observable: ObservableLike<T>,
+  callback: (value: T) => ObservableLike<U>
+): ObservableLike<U> {
+  return new Observable((observer) => {
+    const subscriptions: Subscription[] = [];
+
+    subscriptions.push(
+      observable.subscribe({
+        error: observer.error,
+        next: (value) =>
+          subscriptions.push(callback(value).subscribe(observer)),
+      })
+    );
+
+    return () => subscriptions.forEach(({ unsubscribe }) => unsubscribe());
+  });
+}
+
+export function fromEvent<T extends Event>(
+  target: EventTargetLike,
+  event: string
+) {
+  return new Observable<T>(({ next }) => {
+    const eventListener = (event: T) => next(event);
+    target.addEventListener(event, eventListener);
+    return () => target.removeEventListener(event, eventListener);
+  });
+}
+
+export function map<T, U>(
+  observable: ObservableLike<T>,
+  callback: (value: T) => U
+): ObservableLike<U> {
+  return new Observable((observer) => {
+    const innerSubscription = observable.subscribe({
+      ...observer,
+      next: (value) => observer.next(callback(value)),
+    });
+
+    return () => innerSubscription.unsubscribe();
+  });
+}
+
+export function merge<T>(
+  ...observables: ObservableLike<T>[]
+): ObservableLike<T> {
+  return new Observable((observer) => {
+    if (observables.length === 0) return observer.complete();
+
+    let completedState = 0;
+
+    const innerObserver = {
+      ...observer,
+      complete() {
+        completedState += 1;
+        if (completedState >= observables.length) observer.complete();
+      },
+    };
+
+    const subscriptions = observables.map((observable) =>
+      observable.subscribe(innerObserver)
+    );
+
+    return () => subscriptions.forEach(({ unsubscribe }) => unsubscribe());
+  });
+}
+
+export function take<T>(
+  observable: ObservableLike<T>,
+  amount: number
+): ObservableLike<T> {
+  return new Observable((observer) => {
+    if (amount <= 0) return observer.complete();
+
+    let remaining = amount;
+
+    const innerSubscription = observable.subscribe({
+      ...observer,
+      next: (value) => {
+        observer.next(value);
+        remaining = remaining - 1;
+        if (remaining === 0) observer.complete();
+      },
+    });
+
+    return () => innerSubscription.unsubscribe();
+  });
+}
+
+export function tap<T, S>(
+  observable: ObservableLike<T>,
+  callback: (value: S & T) => void
+): ObservableLike<T> {
+  return new Observable((observer) => {
+    const innerSubscription = observable.subscribe({
+      ...observer,
+      next: (value) => {
+        callback(value as S & T);
+        observer.next(value);
+      },
+    });
+
+    return () => innerSubscription.unsubscribe();
+  });
 }
 
 function toObserver<T>(

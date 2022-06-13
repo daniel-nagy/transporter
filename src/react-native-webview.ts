@@ -1,13 +1,13 @@
 /// <reference lib="dom" />
 
-import { MessageGateway } from ".";
-import { createConnection, listenForConnection } from "./connect";
+import { Client, createClient, SessionManager, SessionPort } from ".";
 import {
-  createEventTarget,
-  EventTargetLike,
-  forwardEvent,
-  MessagePortLike,
-} from "./messaging";
+  createConnection,
+  createPort,
+  listenForConnection,
+  MessageEvent,
+} from "./connect";
+import { fromEvent, merge, Observable, Subject } from "./Observable";
 
 declare global {
   interface Window {
@@ -16,60 +16,65 @@ declare global {
 }
 
 type ConnectProxy = (connection: {
-  delegate(): MessagePortLike;
-  port: MessagePortLike;
-}) => MessagePortLike | null;
+  delegate(): SessionPort;
+  port: SessionPort;
+}) => SessionPort | null;
 
 type ReactNativeWebView = {
   postMessage(message: string): void;
 };
 
-const globalProxy = createEventTarget();
-
 // React Native WebView will send and receive messages from the document on
 // Android.
-Array.of<EventTargetLike>(self, document).forEach((target) =>
-  forwardEvent("message", target, globalProxy)
+const globalProxy = merge(
+  fromEvent<MessageEvent>(self, "message"),
+  fromEvent<MessageEvent>(document, "message")
 );
 
-export function createChannel(
-  webView: ReactNativeWebView | undefined = self.ReactNativeWebView
-) {
-  return createConnection({
-    internal: globalProxy,
-    external: proxyWebView(webView),
-    scope: "react_native",
+export function createSession(
+  optionsOrWebView:
+    | { timeout?: number; webView?: ReactNativeWebView }
+    | ReactNativeWebView = {}
+): Client {
+  const { timeout = undefined, webView = self.ReactNativeWebView } =
+    "postMessage" in optionsOrWebView
+      ? { webView: optionsOrWebView }
+      : optionsOrWebView;
+
+  return createClient({
+    port: createConnection({
+      internal: globalProxy,
+      external: proxyWebView(webView),
+      scope: "react_native",
+    }),
+    timeout,
   });
 }
 
-export function webViewGateway({
-  connect = ({ delegate }) => delegate(),
+export function createSessionManager({
+  connect: connectProxy = ({ delegate }) => delegate(),
   webView = self.ReactNativeWebView,
 }: {
   connect?: ConnectProxy;
   webView?: ReactNativeWebView;
-} = {}): MessageGateway {
-  if (!webView) return () => {};
+} = {}): SessionManager {
+  if (!webView)
+    return { connect: new Observable((observer) => observer.complete()) };
 
-  return (onConnect) => {
-    listenForConnection({
-      onConnect(_event, createPort) {
-        const port = createPort(proxyWebView(webView));
-        const portLike = connect({ delegate: () => port, port });
-        portLike && onConnect(portLike);
+  return {
+    connect: listenForConnection({
+      onConnect() {
+        const port = createPort(globalProxy, proxyWebView(webView));
+        return connectProxy({ delegate: () => port, port });
       },
       scope: "react_native_webview",
       target: globalProxy,
-    });
+    }),
   };
 }
 
 function proxyWebView(webView?: ReactNativeWebView) {
-  const webViewProxy = createEventTarget();
-
-  webViewProxy.addEventListener("message", ({ data }) =>
-    webView?.postMessage(data)
-  );
-
+  const webViewProxy = new Subject<string>();
+  webViewProxy.subscribe((message) => webView?.postMessage(message));
   return webViewProxy;
 }

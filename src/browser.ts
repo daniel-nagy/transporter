@@ -1,18 +1,19 @@
 /// <reference lib="dom" />
 
-import { MessageGateway } from ".";
+import { Client, createClient, SessionManager, SessionPort } from ".";
 import { safeParse } from "./json";
-import { MessagePortLike } from "./messaging";
 import { isObject } from "./object";
+import { filter, fromEvent, map, tap, take } from "./Observable";
 import { Queue } from "./Queue";
+import { Sequence } from "./Sequence";
 
 const MESSAGE_SOURCE = "transporter::browser";
 
-type ConnectProxy = (connection: {
-  delegate(): MessagePortLike;
+export type ConnectProxy = (connection: {
+  delegate(): SessionPort;
   origin: string;
   port: MessagePort;
-}) => MessagePortLike | null;
+}) => SessionPort | null;
 
 enum MessageType {
   ConnectionCreated = "connection_created",
@@ -31,13 +32,18 @@ type CreateConnectionMessage = {
 
 type Message = ConnectionCreatedMessage | CreateConnectionMessage;
 
-export function browserChannel(
-  optionsOrWindow: { origin?: string; window: Window } | Window
-): MessagePortLike {
-  const { origin = "*", window } =
-    optionsOrWindow instanceof Window
-      ? { window: optionsOrWindow }
-      : optionsOrWindow;
+export function createSession(
+  optionsOrWindow:
+    | { origin?: string; timeout?: number; window: Window }
+    | Window
+): Client {
+  const {
+    origin = "*",
+    timeout = undefined,
+    window,
+  } = optionsOrWindow instanceof Window
+    ? { window: optionsOrWindow }
+    : optionsOrWindow;
 
   const channel = new MessageChannel();
 
@@ -51,71 +57,90 @@ export function browserChannel(
   let connected = false;
   let messageQueue: Queue<string> | null = new Queue<string>();
 
-  channel.port1.start();
-  channel.port1.addEventListener("message", function onMessage(event) {
-    if (isConnectionCreatedMessage(safeParse(event.data))) {
-      channel.port1.removeEventListener("message", onMessage);
-      connected = true;
-      messageQueue?.drain((message) => channel.port1.postMessage(message));
-      messageQueue = null;
-    }
-  });
-
-  const { postMessage } = channel.port1;
-
-  return Object.defineProperty(channel.port1, "postMessage", {
-    value: (message: string) =>
-      connected
-        ? postMessage.call(channel.port1, message)
-        : messageQueue?.push(message),
-  });
+  return Sequence.of(channel.port1)
+    .pipe(fromPort)
+    .tap((port) =>
+      Sequence.of(port.receive)
+        .pipe((observable) => map(observable, safeParse))
+        .pipe((observable) => filter(observable, isConnectionCreatedMessage))
+        .pipe((observable) => take(observable, 1))
+        .fold()
+        .subscribe(() => {
+          connected = true;
+          messageQueue?.drain((message) => port.send(message));
+          messageQueue = null;
+        })
+    )
+    .pipe((port) => ({
+      ...port,
+      send: (message: string) =>
+        connected ? port.send(message) : messageQueue?.push(message),
+    }))
+    .pipe((port) => createClient({ port, timeout }))
+    .fold();
 }
 
-export function browserGateway({
+export function createSessionManager({
   connect = ({ delegate }) => delegate(),
   window = self,
 }: {
   connect?: ConnectProxy;
   window?: Window;
-} = {}): MessageGateway {
-  return (onConnect) => {
-    window.addEventListener("message", ({ data, origin, ports: [port] }) => {
-      if (!isCreateConnectionMessage(safeParse(data))) return;
+} = {}): SessionManager {
+  return {
+    connect: Sequence.of(window)
+      .pipe((window) => fromEvent<MessageEvent>(window, "message"))
+      .pipe((observable) =>
+        filter(observable, ({ data }) =>
+          isCreateConnectionMessage(safeParse(data))
+        )
+      )
+      .pipe((observable) =>
+        map(observable, ({ origin, ports: [port] }) =>
+          connect({ delegate: () => fromPort(port), origin, port })
+        )
+      )
+      .pipe((observable) =>
+        filter(observable, (port): port is SessionPort => Boolean(port))
+      )
+      .pipe((observable) =>
+        tap(observable, (port) => {
+          const message: ConnectionCreatedMessage = {
+            source: MESSAGE_SOURCE,
+            type: MessageType.ConnectionCreated,
+          };
 
-      const portLike = connect({
-        delegate: () => {
-          port.start();
-          return port;
-        },
-        origin,
-        port,
-      });
-
-      if (!portLike) return;
-      onConnect(portLike);
-
-      const message: ConnectionCreatedMessage = {
-        source: MESSAGE_SOURCE,
-        type: MessageType.ConnectionCreated,
-      };
-
-      portLike?.postMessage(JSON.stringify(message));
-    });
+          port.send(JSON.stringify(message));
+        })
+      )
+      .fold(),
   };
 }
 
-export function isMessage(message: unknown): message is Message {
-  return isObject(message) && message.source === MESSAGE_SOURCE;
+function fromPort(port: MessagePort): SessionPort {
+  port.start();
+
+  return {
+    receive: Sequence.of(port)
+      .pipe((port) => fromEvent<MessageEvent>(port, "message"))
+      .pipe((observable) => map(observable, (event) => event.data))
+      .fold(),
+    send: (message: string) => port.postMessage(message),
+  };
 }
 
-export function isConnectionCreatedMessage(
+function isConnectionCreatedMessage(
   message: unknown
 ): message is ConnectionCreatedMessage {
   return isMessage(message) && message.type === MessageType.ConnectionCreated;
 }
 
-export function isCreateConnectionMessage(
+function isCreateConnectionMessage(
   message: unknown
 ): message is CreateConnectionMessage {
   return isMessage(message) && message.type === MessageType.CreateConnection;
+}
+
+function isMessage(message: unknown): message is Message {
+  return isObject(message) && message.source === MESSAGE_SOURCE;
 }

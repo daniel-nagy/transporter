@@ -1,6 +1,6 @@
 {
   "name": "@boulevard/transporter",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Transporter abstracts message passing into function calls.",
   "author": "Daniel Nagy <dan@blvd.co>",
   "repository": "github:Boulevard/transporter",
@@ -8,9 +8,13 @@
   "main": "index.js",
   "module": "index.js",
   "keywords": [
+    "client",
     "postmessage",
     "remote",
     "rpc",
+    "server",
+    "service",
+    "soa",
     "transport"
   ],
   "publishConfig": {
