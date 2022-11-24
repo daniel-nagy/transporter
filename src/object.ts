@@ -10,7 +10,10 @@ export function isObject(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object";
 }
 
-export function mapOwnProps<T>(value: T, callback: (value: any) => any): any {
+export function mapOwnProps<T extends Record<any, any>>(
+  value: T,
+  callback: (value: any) => any
+): any {
   return Object.entries(value).reduce(
     (acc, [key, value]) => ({
       ...acc,

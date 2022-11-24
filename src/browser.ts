@@ -97,7 +97,7 @@ export function createSessionManager({
       )
       .pipe((observable) =>
         map(observable, ({ origin, ports: [port] }) =>
-          connect({ delegate: () => fromPort(port), origin, port })
+          connect({ delegate: () => fromPort(port!), origin, port: port! })
         )
       )
       .pipe((observable) =>

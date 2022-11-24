@@ -1,19 +1,23 @@
 {
   "compilerOptions": {
+    "allowJs": false,
     "allowSyntheticDefaultImports": true,
     "declaration": true,
     "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
     "isolatedModules": true,
     "lib": ["es2018"],
     "moduleResolution": "node",
+    "noUncheckedIndexedAccess": true,
     "outDir": "build",
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "sourceMap": true,
     "strict": true,
     "target": "es2018",
-    "types": []
+    "types": [],
+    "useDefineForClassFields": true
   },
-  "include": ["src/**/*"],
-  "exclude": ["src/**/*.test.ts"]
+  "exclude": ["src/**/*.test.ts"],
+  "include": ["src/**/*"]
 }

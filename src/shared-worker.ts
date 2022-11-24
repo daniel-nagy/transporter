@@ -33,7 +33,7 @@ export function createSessionManager({
       .pipe((worker) => fromEvent<MessageEvent>(worker, "connect"))
       .pipe((observable) =>
         map(observable, ({ origin, ports: [port] }) =>
-          connect({ delegate: () => fromPort(port), origin, port })
+          connect({ delegate: () => fromPort(port!), origin, port: port! })
         )
       )
       .pipe((observable) =>

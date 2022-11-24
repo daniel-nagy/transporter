@@ -122,7 +122,7 @@ describe("transporter", () => {
   test("providing an observable of type array with an item of type function", async () => {
     const value = jest.fn();
     const { proxy } = provideValue([value]);
-    (await firstValueFrom(proxy))[0]();
+    (await firstValueFrom(proxy))[0]!();
     expect(value).toHaveBeenCalledTimes(1);
     expect(value).toHaveBeenCalledWith();
   });
@@ -504,7 +504,7 @@ describe("transporter", () => {
 
     await scheduleTask();
     expect(spy).toHaveBeenCalledTimes(1);
-    expect(JSON.parse(spy.mock.calls[0][0])).toEqual({
+    expect(JSON.parse(spy.mock.calls[0]![0])).toEqual({
       id: message.id,
       source: "transporter",
       type: "set",
