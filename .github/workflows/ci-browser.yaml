@@ -1,0 +1,57 @@
+name: CI
+on:
+  pull_request:
+    paths:
+      - packages/browser/**
+      - packages/core/**
+    paths-ignore:
+      - packages/**/.gitignore
+      - packages/**/README.md
+  push:
+    branches:
+      - main
+    paths:
+      - packages/browser/**
+      - packages/core/**
+    paths-ignore:
+      - packages/**/.gitignore
+      - packages/**/README.md
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+      - name: Build package
+        run: bun --cwd packages/browser build
+  eslint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+      - name: Check code style
+        run: bun --cwd packages/browser eslint
+  prettier:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+      - name: Check code style
+        run: bun --cwd packages/browser prettier
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout commit
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        uses: ./.github/actions/install-dependencies
+      - name: Install playwright dependencies
+        uses: ./.github/actions/install-playwright-dependencies
+      - name: Run tests
+        run: bun --cwd packages/browser test

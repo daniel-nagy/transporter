@@ -1,47 +1,9 @@
 {
-  "name": "@boulevard/transporter",
-  "version": "1.0.0-beta.2",
-  "description": "Transporter abstracts message passing into function calls.",
-  "author": "Daniel Nagy <dan@blvd.co>",
-  "repository": "github:Boulevard/transporter",
-  "license": "MIT",
-  "main": "index.js",
-  "module": "index.js",
-  "keywords": [
-    "client",
-    "postmessage",
-    "remote",
-    "rpc",
-    "server",
-    "service",
-    "soa",
-    "transport"
+  "private": true,
+  "workspaces": [
+    "packages/*"
   ],
-  "publishConfig": {
-    "access": "public",
-    "registry": "https://registry.npmjs.org"
-  },
   "scripts": {
-    "prebuild": "yarn clean",
-    "build": "tsc",
-    "postbuild": "cp package.json build",
-    "predistribute": "yarn build",
-    "distribute": "npm publish build",
-    "clean": "rm -rf build",
-    "code:check": "prettier --check .",
-    "code:fix": "prettier --write .",
-    "test": "node --expose-gc $(yarn bin)/jest"
-  },
-  "devDependencies": {
-    "@actions/core": "^1.8.2",
-    "@types/jest": "^27.4.1",
-    "@types/mime-types": "^2.1.1",
-    "aws-sdk": "^2.1133.0",
-    "jest": "^27.5.1",
-    "mime-types": "^2.1.35",
-    "prettier": "^2.6.1",
-    "ts-jest": "^27.1.4",
-    "ts-node": "^10.7.0",
-    "typescript": "^4.9.3"
+    "clean": "rm -rf node_modules"
   }
 }

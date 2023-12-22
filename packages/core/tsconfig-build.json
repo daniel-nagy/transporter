@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "composite": true,
+    "declarationMap": true,
+    "lib": ["ES2022", "ESNext.Disposable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "noEmitOnError": true,
+    "outDir": "build",
+    "target": "ES2018",
+    "tsBuildInfoFile": "build/.tsinfo"
+  },
+  "exclude": ["src/**/*.test.ts", "src/**/*.typetest.ts"],
+  "extends": "./tsconfig-base.json",
+  "include": ["src"]
+}
