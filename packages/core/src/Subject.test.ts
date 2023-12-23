@@ -2,10 +2,10 @@ import { install as useFakeTimers } from "@sinonjs/fake-timers";
 import { expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import { Subject } from './Subject.js';
+import * as Subject from "./Subject.js";
 
 test("subscribing to a subject", () => {
-  const subject = new Subject();
+  const subject = Subject.init();
   const next = spy();
 
   subject.subscribe({ next });
@@ -15,7 +15,7 @@ test("subscribing to a subject", () => {
 });
 
 test("emitting multiple values", () => {
-  const subject = new Subject();
+  const subject = Subject.init();
   const next = spy();
 
   subject.subscribe({ next });
@@ -28,7 +28,7 @@ test("emitting multiple values", () => {
 });
 
 test("a subject does not replay its values", () => {
-  const subject = new Subject();
+  const subject = Subject.init();
   const next1 = spy();
   const next2 = spy();
   const next3 = spy();
@@ -49,7 +49,7 @@ test("a subject does not replay its values", () => {
 });
 
 test("a subject that emits an error", () => {
-  const subject = new Subject();
+  const subject = Subject.init();
   const error = spy();
 
   subject.subscribe({ error });
@@ -60,14 +60,14 @@ test("a subject that emits an error", () => {
 });
 
 test("the error is thrown if at least one observer has no error handler", async () => {
-  const subject = new Subject();
+  const subject = Subject.init();
   subject.subscribe({ error() {} });
   subject.subscribe({});
   expect(() => subject.error("💣")).toThrow("💣");
 });
 
 test("an subject that completes", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const complete = spy();
 
   observable.subscribe({ complete });
@@ -78,7 +78,7 @@ test("an subject that completes", () => {
 });
 
 test("the error callback is only called once", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const error = spy();
 
   observable.subscribe({ error });
@@ -90,7 +90,7 @@ test("the error callback is only called once", () => {
 });
 
 test("the complete callback is only called once", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const complete = spy();
 
   observable.subscribe({ complete });
@@ -102,7 +102,7 @@ test("the complete callback is only called once", () => {
 });
 
 test("new values are not emitted after a subject errors", () => {
-  const observable = new Subject<number>();
+  const observable = Subject.init<number>();
   const next = spy();
 
   observable.subscribe({ next, error() {} });
@@ -117,7 +117,7 @@ test("new values are not emitted after a subject errors", () => {
 });
 
 test("new values are not emitted after an subject completes", () => {
-  const observable = new Subject<number>();
+  const observable = Subject.init<number>();
 
   const observer = spy();
   observable.subscribe(observer);
@@ -132,7 +132,7 @@ test("new values are not emitted after an subject completes", () => {
 });
 
 test("the complete callback is not called if an error occurred", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const complete = spy();
 
   observable.subscribe({ complete, error() {} });
@@ -143,7 +143,7 @@ test("the complete callback is not called if an error occurred", () => {
 });
 
 test("the error callback is not called if an subject completed", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const error = spy();
 
   observable.subscribe({ error });
@@ -156,7 +156,7 @@ test("the error callback is not called if an subject completed", () => {
 test("unsubscribing from a subject", () => {
   const clock = useFakeTimers();
 
-  const observable = new Subject<number>();
+  const observable = Subject.init<number>();
   const next = spy();
   const { unsubscribe } = observable.subscribe({ next });
 
@@ -169,7 +169,7 @@ test("unsubscribing from a subject", () => {
 });
 
 test("The complete callback is called if subscribing to a completed subject", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const complete = spy();
   observable.complete();
   observable.subscribe({ complete });
@@ -178,7 +178,7 @@ test("The complete callback is called if subscribing to a completed subject", ()
 });
 
 test("The error callback is called if subscribing to a subject that errored", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   const error = spy();
   observable.error("💣");
   observable.subscribe({ error });
@@ -187,7 +187,7 @@ test("The error callback is called if subscribing to a subject that errored", ()
 });
 
 test("The error is thrown if subscribing to a subject that errored without an error handler", () => {
-  const observable = new Subject();
+  const observable = Subject.init();
   observable.error("💣");
   expect(() => observable.subscribe({})).toThrow("💣");
 });

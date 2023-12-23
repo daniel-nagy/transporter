@@ -7,6 +7,7 @@ import { spy, spyOn } from "tinyspy";
 
 import { fail } from "./fail.js";
 import { Observable } from "./Observable.js";
+import { of } from "./of.js";
 import { timeout } from "./timeout.js";
 
 let clock: InstalledClock;
@@ -39,7 +40,7 @@ test("the timer is reset each time a value is emitted", () => {
 test("a callback can return a new observable", () => {
   const next = spy();
   const observable = new Observable(() => {});
-  observable.pipe(timeout(1000, () => Observable.of("🥷"))).subscribe(next);
+  observable.pipe(timeout(1000, () => of("🥷"))).subscribe(next);
   expect(() => clock.tick(1000)).not.toThrow();
   expect(next.calls).toEqual([["🥷"]]);
 });
@@ -62,7 +63,7 @@ test("does not swallow errors", () => {
 });
 
 test("does not raise a timeout error if the observable completes", () => {
-  const observable = Observable.of("🐶");
+  const observable = of("🐶");
   observable.pipe(timeout(1000)).subscribe();
   expect(() => clock.tick(1000)).not.toThrow();
 });

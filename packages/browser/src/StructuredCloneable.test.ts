@@ -1,12 +1,12 @@
 import { assert, match, spy } from "sinon";
 
-import { Observable } from "@daniel-nagy/transporter/Observable/Observable";
 import * as Cache from "@daniel-nagy/transporter/Cache";
 import * as Injector from "@daniel-nagy/transporter/Injector";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 import * as PubSub from "@daniel-nagy/transporter/PubSub";
-import * as Session from "@daniel-nagy/transporter/Protocol/Session";
+import * as Session from "@daniel-nagy/transporter/Session";
 import * as StructuredCloneable from "./StructuredCloneable.js";
-import * as Subprotocol from "@daniel-nagy/transporter/Protocol/Subprotocol";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 
 import { test } from "./Test.js";
 
@@ -390,22 +390,18 @@ function connect(client: Session.t, server: Session.t) {
 function expose<const T>(
   value: T,
   {
-    address,
     server: serverConfig
   }: {
-    address?: string;
     server?: { injector?: Injector.t };
   } = {}
 ) {
   const client = Session.client({
     protocol: protocol,
-    resource: Session.Resource<T>(),
-    serverAddress: address
+    resource: Session.Resource<T>()
   });
 
   const server = Session.server({
     ...serverConfig,
-    address,
     protocol: protocol,
     provide: value
   });

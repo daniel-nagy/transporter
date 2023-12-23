@@ -1,12 +1,5 @@
 import { type SinonSpy, assert, match, spy, useFakeTimers } from "sinon";
-import {
-  BufferOverflowError,
-  BufferOverflowStrategy,
-  TimeoutError,
-  firstValueFrom,
-  flatMap,
-  fromEvent
-} from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 
 import * as BrowserSocket from "./BrowserSocket.js";
 import * as BrowserSocketServer from "./BrowserSocketServer.js";
@@ -21,8 +14,8 @@ test("a child frame connecting to a parent frame", async () => {
   using server = BrowserSocketServer.listen();
 
   const message = server.connect.pipe(
-    flatMap((socket) => socket.receive),
-    firstValueFrom
+    Observable.flatMap((socket) => socket.receive),
+    Observable.firstValueFrom
   );
 
   const srcDoc = /* html */ `
@@ -55,7 +48,7 @@ test("a parent frame connecting to a child frame", async () => {
 
   const iframe = await Test.createIframe(srcDoc);
   using socket = BrowserSocket.connect(iframe.contentWindow);
-  const message = socket.receive.pipe(firstValueFrom);
+  const message = socket.receive.pipe(Observable.firstValueFrom);
 
   socket.send("What's up?");
   assert.match(await message, "Not much. You?");
@@ -76,7 +69,7 @@ test("a frame connecting to a dedicated worker", async () => {
   `);
 
   using socket = BrowserSocket.connect(worker);
-  const message = socket.receive.pipe(firstValueFrom);
+  const message = socket.receive.pipe(Observable.firstValueFrom);
 
   socket.send("What's up?");
   assert.match(await message, "Not much. You?");
@@ -97,7 +90,7 @@ test("a frame connecting to a shared worker", async () => {
   `);
 
   using socket = BrowserSocket.connect(worker);
-  const message = socket.receive.pipe(firstValueFrom);
+  const message = socket.receive.pipe(Observable.firstValueFrom);
 
   socket.send("What's up?");
   assert.match(await message, "Not much. You?");
@@ -128,7 +121,7 @@ describe("socket state transitions", () => {
     const iframe = await Test.createIframe(srcDoc);
     using socket = BrowserSocket.connect(iframe.contentWindow);
 
-    await socket.connected.pipe(firstValueFrom);
+    await socket.connected.pipe(Observable.firstValueFrom);
     assert.match(socket.state, State.Connected());
   });
 
@@ -146,7 +139,7 @@ describe("socket state transitions", () => {
 
     socket.stateChange.subscribe((state) => seenStates.push(state));
     socket.close();
-    await socket.closing.pipe(firstValueFrom);
+    await socket.closing.pipe(Observable.firstValueFrom);
 
     assert.match(seenStates, [State.Connecting(), State.Closing()]);
     assert.match(socket.state, State.Closing());
@@ -173,7 +166,7 @@ describe("socket state transitions", () => {
     clock.tick(1000);
     clock.restore();
 
-    await socket.closing.pipe(firstValueFrom);
+    await socket.closing.pipe(Observable.firstValueFrom);
 
     const closingState = {
       ...State.Closing(),
@@ -202,11 +195,11 @@ describe("socket state transitions", () => {
     socket.stateChange.subscribe((state) => seenStates.push(state));
     socket.send("hi");
 
-    await socket.closing.pipe(firstValueFrom);
+    await socket.closing.pipe(Observable.firstValueFrom);
 
     const closingState = {
       ...State.Closing(),
-      error: match.instanceOf(BufferOverflowError)
+      error: match.instanceOf(Observable.BufferOverflowError)
     };
 
     assert.match(seenStates, [State.Connecting(), closingState]);
@@ -229,7 +222,7 @@ describe("socket state transitions", () => {
     {
       using socket = BrowserSocket.connect(iframe.contentWindow);
       socket.stateChange.subscribe((state) => seenStates.push(state));
-      closing = socket.closing.pipe(firstValueFrom);
+      closing = socket.closing.pipe(Observable.firstValueFrom);
     }
 
     await closing;
@@ -243,7 +236,7 @@ describe("socket state transitions", () => {
     const seenStates: State.State[] = [];
 
     socket.stateChange.subscribe((state) => seenStates.push(state));
-    await socket.connected.pipe(firstValueFrom);
+    await socket.connected.pipe(Observable.firstValueFrom);
     socket.close();
 
     assert.match(seenStates, [
@@ -260,7 +253,7 @@ describe("socket state transitions", () => {
 
     socket.stateChange.subscribe((state) => seenStates.push(state));
     channel.port2.postMessage(Message.Disconnect());
-    await socket.closing.pipe(firstValueFrom);
+    await socket.closing.pipe(Observable.firstValueFrom);
 
     assert.match(seenStates, [
       State.Connected(),
@@ -276,7 +269,7 @@ describe("socket state transitions", () => {
     {
       using socket = BrowserSocket.connect(self);
       socket.stateChange.subscribe((state) => seenStates.push(state));
-      await socket.connected.pipe(firstValueFrom);
+      await socket.connected.pipe(Observable.firstValueFrom);
     }
 
     assert.match(seenStates, [
@@ -301,7 +294,7 @@ describe("socket state transitions", () => {
 
     clock.tick(2000);
     clock.restore();
-    await socket.closing.pipe(firstValueFrom);
+    await socket.closing.pipe(Observable.firstValueFrom);
 
     assert.match(seenStates, [
       State.Connected(),
@@ -320,7 +313,7 @@ describe("socket state transitions", () => {
     socket.stateChange.subscribe((state) => seenStates.push(state));
     socket.close();
     channel.port2.postMessage(Message.Disconnected());
-    await socket.closed.pipe(firstValueFrom);
+    await socket.closed.pipe(Observable.firstValueFrom);
 
     assert.match(seenStates, [
       State.Connected(),
@@ -363,7 +356,7 @@ test("the socket state completes once closed", async () => {
   socket.stateChange.subscribe({ complete });
   socket.close();
   channel.port2.postMessage(Message.Disconnected());
-  await socket.closed.pipe(firstValueFrom);
+  await socket.closed.pipe(Observable.firstValueFrom);
 
   assert.calledOnce(complete);
 });
@@ -375,7 +368,7 @@ test("the message port is closed when a socket is closed", async () => {
 
   socket.close();
   channel.port2.postMessage(Message.Disconnected());
-  await socket.closed.pipe(firstValueFrom);
+  await socket.closed.pipe(Observable.firstValueFrom);
 
   assert.calledOnce(close);
 });
@@ -400,7 +393,7 @@ test("passing an origin when connecting to a window", async () => {
 
   const seenStates: State.State[] = [];
   socket.stateChange.subscribe((state) => seenStates.push(state));
-  await socket.closing.pipe(firstValueFrom);
+  await socket.closing.pipe(Observable.firstValueFrom);
 
   assert.match(seenStates, [
     State.Connecting(),
@@ -425,7 +418,7 @@ test("the socket heartbeat is delayed until connection", async () => {
   clock.restore();
   channel.port2.postMessage(Message.Connected());
 
-  await socket.connected.pipe(firstValueFrom);
+  await socket.connected.pipe(Observable.firstValueFrom);
 
   assert.match(seenStates, [State.Connecting(), State.Connected()]);
 });
@@ -443,7 +436,7 @@ test("the socket heartbeat is unsubscribed when the socket is closing", async ()
 
   clock.tick(1500);
   socket.close();
-  await socket.closing.pipe(firstValueFrom);
+  await socket.closing.pipe(Observable.firstValueFrom);
   clock.tick(500);
   clock.restore();
 
@@ -469,9 +462,10 @@ test("a pong message is sent when a ping message is received", async () => {
   const channel = new MessageChannel();
   using _socket = BrowserSocket.fromPort(channel.port1);
   const ping = Message.Ping();
-  const message = fromEvent<MessageEvent>(channel.port2, "message").pipe(
-    firstValueFrom
-  );
+  const message = Observable.fromEvent<MessageEvent>(
+    channel.port2,
+    "message"
+  ).pipe(Observable.firstValueFrom);
   channel.port2.start();
   channel.port2.postMessage(ping);
   assert.match((await message).data, Message.Pong({ id: ping.id }));
@@ -489,7 +483,7 @@ test("ping rejects if a pong is not received before timing out", async () => {
   using socket = BrowserSocket.fromPort(channel.port1);
   assert.match(
     await socket.ping(10).catch((error) => error),
-    match.instanceOf(TimeoutError)
+    match.instanceOf(Observable.TimeoutError)
   );
 });
 
@@ -500,7 +494,7 @@ test("close is not called on dispose if the socket is already closed", async () 
   {
     using socket = BrowserSocket.fromPort(new MessageChannel().port1);
     close = spy(socket, "close");
-    closing = socket.closing.pipe(firstValueFrom);
+    closing = socket.closing.pipe(Observable.firstValueFrom);
     socket.close();
   }
 
@@ -528,7 +522,7 @@ test("internal messages are filtered from the public receive observable", async 
   channel.port2.postMessage("👋");
   channel.port2.postMessage(Message.Connected());
 
-  await socket.connected.pipe(firstValueFrom);
+  await socket.connected.pipe(Observable.firstValueFrom);
 
   assert.callCount(receive, 1);
   assert.calledWith(receive, "👋");
@@ -544,7 +538,7 @@ test("connecting to a server with an explicit address", async () => {
   server2.connect.subscribe(server2Connect);
   const socket = BrowserSocket.connect(self, { serverAddress: "🍌" });
 
-  await socket.connected.pipe(firstValueFrom);
+  await socket.connected.pipe(Observable.firstValueFrom);
 
   assert.callCount(server1Connect, 0);
   assert.callCount(server2Connect, 1);
@@ -554,18 +548,18 @@ test("using a buffer overflow strategy", async () => {
   using server = BrowserSocketServer.listen();
 
   const message = server.connect.pipe(
-    flatMap((socket) => socket.receive),
-    firstValueFrom
+    Observable.flatMap((socket) => socket.receive),
+    Observable.firstValueFrom
   );
 
   using socket = BrowserSocket.connect(self, {
     bufferLimit: 1,
-    bufferOverflowStrategy: BufferOverflowStrategy.DropOldest
+    bufferOverflowStrategy: Observable.BufferOverflowStrategy.DropOldest
   });
 
   socket.send("🍔");
   socket.send("🌭");
-  await socket.connected.pipe(firstValueFrom);
+  await socket.connected.pipe(Observable.firstValueFrom);
 
   assert.match(await message, "🌭");
 });

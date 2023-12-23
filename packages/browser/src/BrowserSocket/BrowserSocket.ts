@@ -1,20 +1,6 @@
-import {
-  BehaviorSubject,
-  BufferOverflowError,
-  BufferOverflowStrategy,
-  Observable,
-  Subject,
-  bufferUntil,
-  cron,
-  fail,
-  filter,
-  firstValueFrom,
-  fromEvent,
-  map,
-  take,
-  takeUntil,
-  timeout as within
-} from "@daniel-nagy/transporter/Observable";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
+import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Subject from "@daniel-nagy/transporter/Subject";
 
 import * as Error from "./Error.js";
 import * as Message from "./Message.js";
@@ -32,7 +18,7 @@ export interface SocketOptions {
   /**
    * What to do incase there is a buffer overflow. The default is to error.
    */
-  bufferOverflowStrategy?: BufferOverflowStrategy;
+  bufferOverflowStrategy?: Observable.BufferOverflowStrategy;
   /**
    * The maximum amount of time to wait for a connection in milliseconds. The
    * default is `2000` or 2 seconds.
@@ -88,7 +74,7 @@ export interface WindowSocketOptions extends SocketOptions {
 export class BrowserSocket {
   constructor({
     bufferLimit = Infinity,
-    bufferOverflowStrategy = BufferOverflowStrategy.Error,
+    bufferOverflowStrategy = Observable.BufferOverflowStrategy.Error,
     connectTimeout = 2000,
     disconnectTimeout = 2000,
     heartbeatInterval = 1000,
@@ -97,52 +83,55 @@ export class BrowserSocket {
     send
   }: {
     bufferLimit?: number;
-    bufferOverflowStrategy?: BufferOverflowStrategy;
+    bufferOverflowStrategy?: Observable.BufferOverflowStrategy;
     connectTimeout?: number;
     disconnectTimeout?: number;
     heartbeatInterval?: number;
     heartbeatTimeout?: number;
-    receive: Observable<MessageEvent<StructuredCloneable.t>>;
+    receive: Observable.t<MessageEvent<StructuredCloneable.t>>;
     send(message: StructuredCloneable.t): void;
   }) {
     this.connected = this.stateChange.pipe(
-      filter((state) => state.type === State.Type.Connected),
-      takeUntil(this.closing),
-      within(connectTimeout, () => fail(new Error.ConnectTimeoutError())),
-      take(1)
+      Observable.filter((state) => state.type === State.Type.Connected),
+      Observable.takeUntil(this.closing),
+      Observable.timeout(connectTimeout, () =>
+        Observable.fail(new Error.ConnectTimeoutError())
+      ),
+      Observable.take(1)
     );
 
     this.receive = receive.pipe(
-      map((message) => message.data),
-      filter((message) => !Message.isMessage(message)),
-      takeUntil(this.closing)
+      Observable.map((message) => message.data),
+      Observable.filter((message) => !Message.isMessage(message)),
+      Observable.takeUntil(this.closing)
     );
 
     this.#disconnectTimeout = disconnectTimeout;
 
     this.#receive = receive.pipe(
-      map((message) => message.data),
-      filter((message) => Message.isMessage(message)),
-      takeUntil(this.closed)
+      Observable.map((message) => message.data),
+      Observable.filter((message) => Message.isMessage(message)),
+      Observable.takeUntil(this.closed)
     );
 
     this.#send
       .asObservable()
       .pipe(
-        bufferUntil(this.connected, {
+        Observable.bufferUntil(this.connected, {
           limit: bufferLimit,
           overflowStrategy: bufferOverflowStrategy
         })
       )
       .subscribe({
-        error: (error: BufferOverflowError | Error.ConnectTimeoutError) =>
-          this.#close(error),
+        error: (
+          error: Observable.BufferOverflowError | Error.ConnectTimeoutError
+        ) => this.#close(error),
         next: (message) => send(message)
       });
 
     this.connected.subscribe(() => {
-      cron(heartbeatInterval, () => this.ping(heartbeatTimeout))
-        .pipe(takeUntil(this.closing))
+      Observable.cron(heartbeatInterval, () => this.ping(heartbeatTimeout))
+        .pipe(Observable.takeUntil(this.closing))
         .subscribe({
           error: () => this.#close(new Error.HeartbeatTimeoutError())
         });
@@ -168,9 +157,9 @@ export class BrowserSocket {
   }
 
   #disconnectTimeout: number;
-  #receive: Observable<Message.Message>;
-  #send = new Subject<StructuredCloneable.t>();
-  #state = new BehaviorSubject<State.State>(State.Connecting());
+  #receive: Observable.t<Message.Message>;
+  #send = Subject.init<StructuredCloneable.t>();
+  #state = BehaviorSubject.of<State.State>(State.Connecting());
 
   /**
    * Returns the current state of the socket.
@@ -189,29 +178,29 @@ export class BrowserSocket {
    * Emits when the socket transitions to a closing state and then completes.
    */
   readonly closing = this.stateChange.pipe(
-    filter((state) => state.type === State.Type.Closing),
-    take(1)
+    Observable.filter((state) => state.type === State.Type.Closing),
+    Observable.take(1)
   );
 
   /**
    * Emits when the socket transitions to a closed state and then completes.
    */
   readonly closed = this.stateChange.pipe(
-    filter((state) => state.type === State.Type.Closed),
-    take(1)
+    Observable.filter((state) => state.type === State.Type.Closed),
+    Observable.take(1)
   );
 
   /**
    * Emits if the socket becomes connected and then completes. If the
    * socket errors during connection it will complete without emitting.
    */
-  readonly connected: Observable<State.Connected>;
+  readonly connected: Observable.t<State.Connected>;
 
   /**
    * Emits whenever the socket receives a message. Internal messages are
    * filtered from the observable stream.
    */
-  readonly receive: Observable<StructuredCloneable.t>;
+  readonly receive: Observable.t<StructuredCloneable.t>;
 
   /**
    * Closes the socket causing its state to transition to closing.
@@ -232,13 +221,13 @@ export class BrowserSocket {
     this.#send.next(ping);
 
     return this.#receive.pipe(
-      filter(
+      Observable.filter(
         (message) =>
           Message.isType(message, Message.Type.Pong) && message.id === ping.id
       ),
-      within(timeout),
-      map(() => {}),
-      firstValueFrom
+      Observable.timeout(timeout),
+      Observable.map(() => {}),
+      Observable.firstValueFrom
     );
   }
 
@@ -258,8 +247,8 @@ export class BrowserSocket {
 
     this.closed
       .pipe(
-        within(this.#disconnectTimeout, () =>
-          fail(new Error.DisconnectTimeoutError())
+        Observable.timeout(this.#disconnectTimeout, () =>
+          Observable.fail(new Error.DisconnectTimeoutError())
         )
       )
       .subscribe({
@@ -342,7 +331,10 @@ export function fromPort(
 
   const socket = new BrowserSocket({
     ...options,
-    receive: fromEvent<MessageEvent<StructuredCloneable.t>>(port, "message"),
+    receive: Observable.fromEvent<MessageEvent<StructuredCloneable.t>>(
+      port,
+      "message"
+    ),
     send: (message: StructuredCloneable.t) => port.postMessage(message)
   });
 

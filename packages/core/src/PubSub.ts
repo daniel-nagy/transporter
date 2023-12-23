@@ -1,4 +1,4 @@
-import type { ObservableLike } from "./Observable/index.js";
+import * as Observable from "./Observable/index.js";
 
 /**
  * Represents a remote subscription.
@@ -31,7 +31,7 @@ export type { PubSub as t };
 /**
  * Creates a `PubSub` from an `ObservableLike`.
  */
-export function from<T>(observable: ObservableLike<T>): PubSub<T> {
+export function from<T>(observable: Observable.ObservableLike<T>): PubSub<T> {
   return {
     subscribe: async (
       observer: AsyncObserver<T> | ((value: T) => Promise<void>)

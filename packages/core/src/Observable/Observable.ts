@@ -1,6 +1,8 @@
-import { isPromise } from "../JsPromise.js";
+import { toObserver } from "./toObserver.js";
 
-export type UnaryFunction<A, B> = (a: A) => B;
+export { Observable as t };
+
+type UnaryFunction<A, B> = (a: A) => B;
 
 export interface ObservableLike<T> {
   subscribe(observerOrNext?: Observer<T> | ((value: T) => void)): Subscription;
@@ -30,7 +32,7 @@ export type Subscription = {
   unsubscribe(): void;
 };
 
-export enum ObservableState {
+export enum State {
   Complete = "Complete",
   Error = "Error",
   NotComplete = "NotComplete",
@@ -66,75 +68,29 @@ export enum ObservableState {
  * JavaScript.
  */
 export class Observable<T> implements ObservableLike<T> {
-  /**
-   * Creates a new `Observable` from an object that is observable like or
-   * promise like.
-   *
-   * @example
-   *
-   * Observable.from(Promise.resolve("👍"));
-   */
-  static from<T>(
-    observable: ObservableLike<T> | PromiseLike<T>
-  ): Observable<T> {
-    if (isPromise(observable)) {
-      return new Observable((observer: Observer<T>) => {
-        observable.then(
-          (value) => {
-            observer.next?.(value);
-            observer.complete?.();
-          },
-          (error: unknown) => observer.error?.(error)
-        );
-      });
-    }
-
-    return Object.create(Observable.prototype, {
-      subscribe: { value: observable.subscribe.bind(observable) }
-    });
-  }
-
-  /**
-   * Creates a new `Observable` that emits each argument synchronously and then
-   * completes.
-   *
-   * @example
-   *
-   * const observable = Observable.of(1, 2, 3);
-   *
-   * // Logs the values 1, 2, and 3 synchronously and then completes.
-   * observable.subscribe(console.log);
-   */
-  static of<T>(...values: [T, ...T[]]) {
-    return new Observable<T>((observer) => {
-      values.forEach((value) => observer.next?.(value));
-      observer.complete?.();
-    });
-  }
-
   #subscribe: (observer: Observer<T>) => () => void;
 
   constructor(subscribe: (observer: Observer<T>) => (() => void) | void) {
     this.#subscribe = (observer: Observer<T>) => {
       let errorRef: unknown = undefined;
-      let state = ObservableState.NotComplete;
+      let state = State.NotComplete;
       let subscribeComplete = false;
       let throwError = false;
 
       const cleanUp = subscribe({
         next: (value) => {
-          if (state !== ObservableState.NotComplete) return;
+          if (state !== State.NotComplete) return;
           observer.next?.(value);
         },
         complete: () => {
-          if (state !== ObservableState.NotComplete) return;
-          state = ObservableState.Complete;
+          if (state !== State.NotComplete) return;
+          state = State.Complete;
           observer.complete?.();
           subscribeComplete && cleanUp?.();
         },
         error: (error) => {
-          if (state !== ObservableState.NotComplete) return;
-          state = ObservableState.Error;
+          if (state !== State.NotComplete) return;
+          state = State.Error;
           observer.error?.(error);
           subscribeComplete && cleanUp?.();
 
@@ -151,15 +107,15 @@ export class Observable<T> implements ObservableLike<T> {
 
       subscribeComplete = true;
 
-      if (state !== ObservableState.NotComplete) {
+      if (state !== State.NotComplete) {
         cleanUp?.();
       }
 
       if (throwError) throw errorRef;
 
       return () => {
-        if (state !== ObservableState.NotComplete) return;
-        state = ObservableState.Unsubscribed;
+        if (state !== State.NotComplete) return;
+        state = State.Unsubscribed;
         cleanUp?.();
       };
     };
@@ -280,16 +236,4 @@ export class Observable<T> implements ObservableLike<T> {
       }
     };
   }
-}
-
-/**
- * Takes a value that may be an observer or a next function and returns an
- * observer.
- */
-export function toObserver<T>(
-  observerOrNext: Observer<T> | ((value: T) => void) = () => {}
-): Observer<T> {
-  return typeof observerOrNext === "function"
-    ? { next: observerOrNext }
-    : observerOrNext;
 }

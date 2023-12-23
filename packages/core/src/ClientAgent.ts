@@ -1,15 +1,7 @@
-import {
-  type Observer,
-  Observable,
-  fail,
-  filter,
-  firstValueFrom,
-  flatMap
-  // timeout,
-} from "../Observable/index.js";
-import * as Fiber from "../Fiber.js";
+import * as Fiber from "./Fiber.js";
 import * as Message from "./Message.js";
-import * as Metadata from "../Metadata.js";
+import * as Metadata from "./Metadata.js";
+import * as Observable from "./Observable/index.js";
 
 export { ClientAgent as t };
 
@@ -17,9 +9,9 @@ namespace Js {
   export const Proxy = globalThis.Proxy;
 }
 
-type Input = Observable<Message.Error<unknown> | Message.SetValue<unknown>>;
+type Input = Observable.t<Message.Error<unknown> | Message.SetValue<unknown>>;
 
-type Output = Required<Observer<Message.CallFunction<unknown[]>>>;
+type Output = Required<Observable.Observer<Message.CallFunction<unknown[]>>>;
 
 /**
  * Encapsulates the responsibilities of a client in order to fulfill the
@@ -49,17 +41,17 @@ export class ClientAgent extends Fiber.t {
    */
   #awaitResponse(message: Message.CallFunction<unknown[]>) {
     const promise = this.input.pipe(
-      filter(({ id }) => id === message.id),
+      Observable.filter(({ id }) => id === message.id),
       // timeout(5000),
-      flatMap((reply) => {
+      Observable.flatMap((reply) => {
         switch (reply.type) {
           case Message.Type.Error:
-            return fail(this.decode(reply.error));
+            return Observable.fail(this.decode(reply.error));
           case Message.Type.Set:
             return Observable.of(this.decode(reply.value));
         }
       }),
-      firstValueFrom
+      Observable.firstValueFrom
     );
 
     this.output.next(message);

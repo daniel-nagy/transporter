@@ -1,13 +1,6 @@
-import {
-  BehaviorSubject,
-  filter,
-  fromEvent,
-  map,
-  take,
-  takeUntil,
-  tap
-} from "@daniel-nagy/transporter/Observable";
-import * as AddressBook from "@daniel-nagy/transporter/Protocol/AddressBook";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 
 import * as Request from "./BrowserRequest.js";
 import * as Response from "./BrowserResponse.js";
@@ -73,10 +66,10 @@ export class BrowserServer {
     const sharedWorker = typeof SharedWorkerGlobalScope !== "undefined";
 
     if (sharedWorker) {
-      fromEvent<ConnectEvent>(self, "connect")
+      Observable.fromEvent<ConnectEvent>(self, "connect")
         .pipe(
-          map((event) => event.ports[0]),
-          tap((port) => port.start())
+          Observable.map((event) => event.ports[0]),
+          Observable.tap((port) => port.start())
         )
         .subscribe((port) => this.#onConnect(port));
     } else {
@@ -84,7 +77,7 @@ export class BrowserServer {
     }
   }
 
-  #state = new BehaviorSubject(State.Listening);
+  #state = BehaviorSubject.of(State.Listening);
 
   /**
    * Returns the current state of the server.
@@ -103,8 +96,8 @@ export class BrowserServer {
    * Emits when the server is stopped and then completes.
    */
   readonly stopped = this.stateChange.pipe(
-    filter((state) => state === State.Stopped),
-    take(1)
+    Observable.filter((state) => state === State.Stopped),
+    Observable.take(1)
   );
 
   /**
@@ -117,10 +110,10 @@ export class BrowserServer {
   }
 
   #onConnect(target: MessagePort | Window | Worker | ServiceWorker) {
-    fromEvent<MessageEvent<StructuredCloneable.t>>(target, "message")
+    Observable.fromEvent<MessageEvent<StructuredCloneable.t>>(target, "message")
       .pipe(
-        takeUntil(this.stopped),
-        filter(
+        Observable.takeUntil(this.stopped),
+        Observable.filter(
           (message): message is MessageEvent<Request.t> =>
             Request.isRequest(message) && message.data.address === this.address
         )

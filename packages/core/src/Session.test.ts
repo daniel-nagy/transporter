@@ -1,14 +1,14 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spy, spyOn } from "tinyspy";
 
-import { filter, firstValueFrom } from "../Observable/index.js";
-import * as Cache from "../Cache.js";
-import * as Fiber from "../Fiber.js";
-import * as Injector from "../Injector.js";
-import * as Json from "../Json.js";
+import * as Cache from "./Cache.js";
+import * as Fiber from "./Fiber.js";
+import * as Injector from "./Injector.js";
+import * as Json from "./Json.js";
 import * as Message from "./Message.js";
-import * as Metadata from "../Metadata.js";
-import * as Proxy from "../Proxy.js";
+import * as Metadata from "./Metadata.js";
+import * as Observable from "./Observable/index.js";
+import * as Proxy from "./Proxy.js";
 import * as Session from "./Session.js";
 import * as Subprotocol from "./Subprotocol.js";
 
@@ -51,8 +51,8 @@ describe("session management", () => {
     );
 
     const noMoreTasks = client.taskCount.pipe(
-      filter((count) => count === 0),
-      firstValueFrom
+      Observable.filter((count) => count === 0),
+      Observable.firstValueFrom
     );
 
     await proxy();

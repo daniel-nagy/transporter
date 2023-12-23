@@ -1,23 +1,18 @@
-import {
-  type Observable,
-  type Observer,
-  filter,
-  takeUntil
-} from "../Observable/index.js";
-import * as Fiber from "../Fiber.js";
-import * as Injector from "../Injector.js";
-import * as JsFunction from "../JsFunction.js";
-import * as JsObject from "../JsObject.js";
+import * as Fiber from "./Fiber.js";
+import * as Injector from "./Injector.js";
+import * as JsFunction from "./JsFunction.js";
+import * as JsObject from "./JsObject.js";
 import * as Message from "./Message.js";
+import * as Observable from "./Observable/index.js";
 
 export { ServerAgent as t };
 
-type Input = Observable<
+type Input = Observable.t<
   Message.CallFunction<unknown[]> | Message.GarbageCollect
 >;
 
 type Output = Required<
-  Observer<Message.Error<unknown> | Message.SetValue<unknown>>
+  Observable.Observer<Message.Error<unknown> | Message.SetValue<unknown>>
 >;
 
 /**
@@ -45,13 +40,13 @@ class ServerAgent extends Fiber.t {
     super();
 
     const terminated = this.stateChange.pipe(
-      filter((state) => state === Fiber.State.Terminated)
+      Observable.filter((state) => state === Fiber.State.Terminated)
     );
 
     this.input
       .pipe(
-        takeUntil(terminated),
-        filter((message) => message.address === this.address)
+        Observable.takeUntil(terminated),
+        Observable.filter((message) => message.address === this.address)
       )
       .subscribe((message) => this.#processMessage(message));
   }

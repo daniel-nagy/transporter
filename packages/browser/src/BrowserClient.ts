@@ -1,9 +1,4 @@
-import {
-  filter,
-  firstValueFrom,
-  fromEvent,
-  map
-} from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 
 import * as Request from "./BrowserRequest.js";
 import * as Response from "./BrowserResponse.js";
@@ -69,12 +64,15 @@ export class BrowserClient {
     const messageSource = getMessageSource(this.target);
     const request = Request.t({ address: this.serverAddress, body });
 
-    const response = fromEvent<MessageEvent>(messageSource, "message").pipe(
-      filter(
+    const response = Observable.fromEvent<MessageEvent>(
+      messageSource,
+      "message"
+    ).pipe(
+      Observable.filter(
         (message): message is MessageEvent<Response.t> =>
           Response.isResponse(message) && message.data.id === request.id
       ),
-      map((message) => message.data.body)
+      Observable.map((message) => message.data.body)
     );
 
     // Not sure it this is necessary or useful.
@@ -83,7 +81,7 @@ export class BrowserClient {
 
     messageSink.postMessage(request, { targetOrigin: this.origin });
 
-    return firstValueFrom(response);
+    return Observable.firstValueFrom(response);
   }
 }
 

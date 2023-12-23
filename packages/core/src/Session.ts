@@ -1,15 +1,16 @@
-import { type Observer, Subject, filter, take } from "../Observable/index.js";
 import * as ClientAgent from "./ClientAgent.js";
 import * as Codec from "./Codec.js";
-import * as Fiber from "../Fiber.js";
-import * as Injector from "../Injector.js";
-import * as JsFunction from "../JsFunction.js";
-import * as JsObject from "../JsObject.js";
+import * as Fiber from "./Fiber.js";
+import * as Injector from "./Injector.js";
+import * as JsFunction from "./JsFunction.js";
+import * as JsObject from "./JsObject.js";
 import * as Message from "./Message.js";
-import * as Proxy from "../Proxy.js";
+import * as Observable from "./Observable/index.js";
+import * as Proxy from "./Proxy.js";
 import * as ServerAgent from "./ServerAgent.js";
+import * as Subject from "./Subject.js";
 import * as Subprotocol from "./Subprotocol.js";
-import * as Supervisor from "../Supervisor.js";
+import * as Supervisor from "./Supervisor.js";
 
 export { Session as t };
 
@@ -55,11 +56,11 @@ export abstract class Session<
   Protocol = unknown,
   Value = unknown
 > extends Supervisor.t<Agent> {
-  #input = new Subject<Message.t<Protocol>>();
-  #output = new Subject<Message.t<Protocol>>();
+  #input = Subject.init<Message.t<Protocol>>();
+  #output = Subject.init<Message.t<Protocol>>();
 
   public readonly input = this.#input as Required<
-    Observer<Message.t<Protocol>>
+    Observable.Observer<Message.t<Protocol>>
   >;
 
   public readonly output = this.#output.asObservable();
@@ -182,12 +183,12 @@ export abstract class Session<
   #autoTerminate() {
     this.taskCount
       .pipe(
-        filter((count) => count > 0),
-        take(1)
+        Observable.filter((count) => count > 0),
+        Observable.take(1)
       )
       .subscribe(() =>
         this.taskCount
-          .pipe(filter((count) => count === 0))
+          .pipe(Observable.filter((count) => count === 0))
           .subscribe(() => queueMicrotask(() => this.terminate()))
       );
   }

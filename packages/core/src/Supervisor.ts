@@ -1,5 +1,6 @@
-import { BehaviorSubject, filter } from "./Observable/index.js";
+import * as BehaviorSubject from "./BehaviorSubject.js";
 import * as Fiber from "./Fiber.js";
+import * as Observable from "./Observable/index.js";
 
 export { Supervisor as t };
 
@@ -23,7 +24,7 @@ export class UniqueTaskIdError extends Error {
  * a supervisor is terminated, all of its tasks will be terminated as well.
  */
 export class Supervisor<Task extends Fiber.t = Fiber.t> extends Fiber.t {
-  #taskCount = new BehaviorSubject(0);
+  #taskCount = BehaviorSubject.of(0);
 
   readonly taskCount = this.#taskCount.asObservable();
   readonly tasks = new Map<string, Task>();
@@ -51,7 +52,7 @@ export class Supervisor<Task extends Fiber.t = Fiber.t> extends Fiber.t {
     this.#taskCount.next(this.tasks.size);
 
     task.stateChange
-      .pipe(filter((state) => state === Fiber.State.Terminated))
+      .pipe(Observable.filter((state) => state === Fiber.State.Terminated))
       .subscribe(() => {
         if (this.tasks.delete(task.id)) this.#taskCount.next(this.tasks.size);
       });
@@ -62,7 +63,7 @@ export class Supervisor<Task extends Fiber.t = Fiber.t> extends Fiber.t {
    */
   terminate() {
     this.taskCount
-      .pipe(filter((count) => count === 0))
+      .pipe(Observable.filter((count) => count === 0))
       .subscribe(() => queueMicrotask(() => this.#taskCount.complete()));
 
     this.tasks.forEach((task) => task.terminate());

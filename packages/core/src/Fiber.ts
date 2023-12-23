@@ -1,4 +1,4 @@
-import { BehaviorSubject } from "./Observable/index.js";
+import * as BehaviorSubject from "./BehaviorSubject.js";
 
 export { Fiber as t };
 
@@ -18,7 +18,7 @@ export enum State {
  * point in the future.
  */
 export class Fiber {
-  #state = new BehaviorSubject(State.Active);
+  #state = BehaviorSubject.of(State.Active);
 
   get state() {
     return this.#state.getValue();

@@ -2,10 +2,12 @@ import { install as useFakeTimers } from "@sinonjs/fake-timers";
 import { expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import { Observable } from './Observable.js';
+import { from } from "./from.js";
+import { Observable } from "./Observable.js";
+import { of } from "./of.js";
 
 test("subscribing to an observable", () => {
-  const observable = Observable.of(5);
+  const observable = of(5);
   const observer = spy();
   observable.subscribe(observer);
 
@@ -14,7 +16,7 @@ test("subscribing to an observable", () => {
 });
 
 test("subscribing to the same observable more than once", () => {
-  const observable = Observable.of(5);
+  const observable = of(5);
   const observer0 = spy();
   const observer1 = spy();
   observable.subscribe(observer0);
@@ -27,7 +29,7 @@ test("subscribing to the same observable more than once", () => {
 });
 
 test("emitting multiple values", () => {
-  const observable = Observable.of(1, 2, 3);
+  const observable = of(1, 2, 3);
   const observer = spy();
   observable.subscribe(observer);
 
@@ -241,14 +243,14 @@ test("the cleanup function is not called if the observable never completes", () 
 });
 
 test("the of static constructor completes the observable after all values are emitted", () => {
-  const observable = Observable.of(1, 2);
+  const observable = of(1, 2);
   const complete = spy();
   observable.subscribe({ complete });
   expect(complete.callCount).toBe(1);
 });
 
 test("the from static constructor creates an observable from an observable like", () => {
-  const observable = Observable.from({
+  const observable = from({
     subscribe(observerOrNext) {
       const observer =
         typeof observerOrNext === "function"

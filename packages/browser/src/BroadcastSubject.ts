@@ -1,14 +1,11 @@
-import {
-  type Observer,
-  ObservableState,
-  Subject,
-  fromEvent,
-  map
-} from "@daniel-nagy/transporter/Observable";
-import * as Session from "@daniel-nagy/transporter/Protocol/Session";
-import * as Subprotocol from "@daniel-nagy/transporter/Protocol/Subprotocol";
+import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Session from "@daniel-nagy/transporter/Session";
+import * as Subject from "@daniel-nagy/transporter/Subject";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 
-import * as StructuredCloneable from "./StructuredCloneable";
+import * as StructuredCloneable from "./StructuredCloneable.js";
+
+type Observer<T> = Required<Observable.Observer<T>>;
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.Connectionless,
@@ -29,7 +26,7 @@ const protocol = Subprotocol.init({
  */
 export class BroadcastSubject<
   T extends StructuredCloneable.t
-> extends Subject<T> {
+> extends Subject.t<T> {
   constructor(public readonly name: string) {
     super();
 
@@ -47,8 +44,8 @@ export class BroadcastSubject<
     this.#server = Session.server({ protocol, provide: observer });
     this.#transmitter = new BroadcastChannel(name);
 
-    fromEvent<MessageEvent>(this.#receiver, "message")
-      .pipe(map((message) => message.data))
+    Observable.fromEvent<MessageEvent>(this.#receiver, "message")
+      .pipe(Observable.map((message) => message.data))
       .subscribe(this.#server.input);
 
     this.#client.output.subscribe((message) =>
@@ -56,24 +53,24 @@ export class BroadcastSubject<
     );
   }
 
-  #client: Session.ClientSession<StructuredCloneable.t, Required<Observer<T>>>;
-  #proxy: Required<Observer<T>>;
+  #client: Session.ClientSession<StructuredCloneable.t, Observer<T>>;
+  #proxy: Observer<T>;
   #receiver: BroadcastChannel;
-  #server: Session.ServerSession<StructuredCloneable.t, Required<Observer<T>>>;
+  #server: Session.ServerSession<StructuredCloneable.t, Observer<T>>;
   #transmitter: BroadcastChannel;
 
   complete() {
-    if (this.state === ObservableState.NotComplete) this.#proxy.complete();
+    if (this.state === Observable.State.NotComplete) this.#proxy.complete();
     this.#complete();
   }
 
   error(error: unknown) {
-    if (this.state === ObservableState.NotComplete) this.#proxy.error(error);
+    if (this.state === Observable.State.NotComplete) this.#proxy.error(error);
     this.#error(error);
   }
 
   next(value: T) {
-    if (this.state === ObservableState.NotComplete) this.#proxy.next(value);
+    if (this.state === Observable.State.NotComplete) this.#proxy.next(value);
     this.#next(value);
   }
 
@@ -97,4 +94,10 @@ export class BroadcastSubject<
   #next(value: T) {
     super.next(value);
   }
+}
+
+export function fromChannel<T extends StructuredCloneable.t>(
+  name: string
+): BroadcastSubject<T> {
+  return new BroadcastSubject<T>(name);
 }

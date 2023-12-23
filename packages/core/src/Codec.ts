@@ -1,6 +1,6 @@
-import * as JsFunction from "../JsFunction.js";
-import * as JsObject from "../JsObject.js";
-import * as Proxy from "../Proxy.js";
+import * as JsFunction from "./JsFunction.js";
+import * as JsObject from "./JsObject.js";
+import * as Proxy from "./Proxy.js";
 
 /**
  * Decodes the payload of a Transporter message. If a proxy is encountered while

@@ -5,7 +5,7 @@ import {
 import { afterEach, beforeEach, expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import { IntervalError, timer } from './Time.js';
+import { IntervalError, timer } from "./Time.js";
 
 let clock: InstalledClock;
 

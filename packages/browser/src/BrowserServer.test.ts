@@ -1,4 +1,4 @@
-import * as AddressBook from "@daniel-nagy/transporter/Protocol/AddressBook";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
 import { assert, spy } from "sinon";
 
 import * as BrowserServer from "./BrowserServer.js";
@@ -16,7 +16,9 @@ test("A server must have a globally unique address", () => {
 
   try {
     listenSpy({ address: "", handle() {} });
-  } catch (e) {}
+  } catch (e) {
+    // empty
+  }
 
   assert.threw(listenSpy, AddressBook.UniqueAddressError.name);
 });

@@ -1,4 +1,4 @@
-import * as JsObject from "../JsObject.js";
+import * as JsObject from "./JsObject.js";
 
 import t = Message.t;
 export type { t };

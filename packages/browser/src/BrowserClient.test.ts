@@ -1,8 +1,4 @@
-import {
-  filter,
-  firstValueFrom,
-  fromEvent
-} from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 import { assert } from "sinon";
 
 import * as BrowserClient from "./BrowserClient.js";
@@ -31,11 +27,13 @@ test("a child frame making a request to a parent frame", async () => {
     </script>
   `;
 
-  const messageStream = fromEvent<MessageEvent>(self, "message");
+  const messageStream = Observable.fromEvent<MessageEvent>(self, "message");
   await Test.createIframe(srcDoc);
 
-  const response = await firstValueFrom(
-    messageStream.pipe(filter((message) => message.data.type === "received"))
+  const response = await Observable.firstValueFrom(
+    messageStream.pipe(
+      Observable.filter((message) => message.data.type === "received")
+    )
   );
 
   assert.match(response.data.response, "hi from the parent");

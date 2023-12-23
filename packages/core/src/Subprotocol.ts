@@ -1,4 +1,4 @@
-import * as JsFunction from "../JsFunction.js";
+import * as JsFunction from "./JsFunction.js";
 
 /**
  * The type of connection between the server and the client.

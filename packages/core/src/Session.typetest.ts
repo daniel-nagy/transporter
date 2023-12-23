@@ -1,6 +1,6 @@
-import * as Injector from "../Injector.js";
-import * as Json from "../Json.js";
-import * as Proxy from "../Proxy.js";
+import * as Injector from "./Injector.js";
+import * as Json from "./Json.js";
+import * as Proxy from "./Proxy.js";
 import * as Session from "./Session.js";
 import * as Subprotocol from "./Subprotocol.js";
 

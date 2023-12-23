@@ -1,22 +1,13 @@
-import {
-  BehaviorSubject,
-  Observable,
-  Subject,
-  filter,
-  flatMap,
-  fromEvent,
-  map,
-  take,
-  takeUntil,
-  tap
-} from "@daniel-nagy/transporter/Observable";
-import * as AddressBook from "@daniel-nagy/transporter/Protocol/AddressBook";
-
-const ADDRESS_SPACE = "BrowserSocketServer";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
+import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Subject from "@daniel-nagy/transporter/Subject";
 
 import * as BrowserSocket from "./BrowserSocket.js";
 import * as Message from "./Message.js";
 import * as StructuredCloneable from "../StructuredCloneable.js";
+
+const ADDRESS_SPACE = "BrowserSocketServer";
 
 export { BrowserSocketServer as t };
 
@@ -67,7 +58,7 @@ export class BrowserSocketServer {
   }: {
     address?: string;
     connectFilter?(message: ConnectEvent<Message.Connect>): boolean;
-    receive: Observable<MessageEvent<StructuredCloneable.t>>;
+    receive: Observable.t<MessageEvent<StructuredCloneable.t>>;
     socketOptions?: SocketOptions;
   }) {
     this.address = address;
@@ -76,20 +67,20 @@ export class BrowserSocketServer {
 
     receive
       .pipe(
-        takeUntil(this.stopped),
-        filter(
+        Observable.takeUntil(this.stopped),
+        Observable.filter(
           (message): message is ConnectEvent<Message.Connect> =>
             Message.isType(message.data, Message.Type.Connect) &&
             message.data.address === address
         ),
-        filter(connectFilter)
+        Observable.filter(connectFilter)
       )
       .subscribe((message) => this.#onConnect(message, socketOptions));
   }
 
   #clients: BrowserSocket.t[] = [];
-  #connect = new Subject<BrowserSocket.t>();
-  #state = new BehaviorSubject(State.Listening);
+  #connect = Subject.init<BrowserSocket.t>();
+  #state = BehaviorSubject.of(State.Listening);
 
   /**
    * The address of the socket server.
@@ -100,7 +91,8 @@ export class BrowserSocketServer {
    * Emits whenever a connection is established with a client. Completes when
    * the server is stopped.
    */
-  readonly connect: Observable<BrowserSocket.t> = this.#connect.asObservable();
+  readonly connect: Observable.t<BrowserSocket.t> =
+    this.#connect.asObservable();
 
   /**
    * Returns the current state of the socket server.
@@ -119,8 +111,8 @@ export class BrowserSocketServer {
    * Emits when the server is stopped and then completes.
    */
   readonly stopped = this.stateChange.pipe(
-    filter((state) => state === State.Stopped),
-    take(1)
+    Observable.filter((state) => state === State.Stopped),
+    Observable.take(1)
   );
 
   /**
@@ -172,16 +164,19 @@ export function listen(options?: SocketServerOptions) {
   if (sharedWorker) {
     return new BrowserSocketServer({
       ...options,
-      receive: fromEvent<ConnectEvent>(self, "connect").pipe(
-        map((event) => event.ports[0]),
-        tap((port) => port.start()),
-        flatMap((port) => fromEvent(port, "message"))
+      receive: Observable.fromEvent<ConnectEvent>(self, "connect").pipe(
+        Observable.map((event) => event.ports[0]),
+        Observable.tap((port) => port.start()),
+        Observable.flatMap((port) => Observable.fromEvent(port, "message"))
       )
     });
   }
 
   return new BrowserSocketServer({
     ...options,
-    receive: fromEvent<MessageEvent<StructuredCloneable.t>>(self, "message")
+    receive: Observable.fromEvent<MessageEvent<StructuredCloneable.t>>(
+      self,
+      "message"
+    )
   });
 }

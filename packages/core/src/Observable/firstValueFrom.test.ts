@@ -1,12 +1,13 @@
 import { install as useFakeTimers } from "@sinonjs/fake-timers";
 import { expect, test } from "bun:test";
 
-import { BehaviorSubject } from './BehaviorSubject.js';
-import { EmptyError, firstValueFrom } from './firstValueFrom.js';
-import { Observable } from './Observable.js';
+import { BehaviorSubject } from "../BehaviorSubject.js";
+import { EmptyError, firstValueFrom } from "./firstValueFrom.js";
+import { Observable } from "./Observable.js";
+import { of } from "./of.js";
 
 test("getting the first value from an observable", async () => {
-  const observable = Observable.of(1, 2, 3);
+  const observable = of(1, 2, 3);
   expect(await firstValueFrom(observable)).toBe(1);
 });
 

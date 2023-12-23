@@ -1,4 +1,4 @@
-import { BufferOverflowError } from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 
 export class ConnectTimeoutError extends Error {
   readonly name = "ConnectTimeoutError";
@@ -17,6 +17,6 @@ export class HeartbeatTimeoutError extends Error {
  * state with an error.
  */
 export type ConnectionError =
-  | BufferOverflowError
+  | Observable.BufferOverflowError
   | ConnectTimeoutError
   | HeartbeatTimeoutError;

@@ -1,3 +1,4 @@
+import { from } from "./from.js";
 import {
   type ObservableLike,
   type Subscription,
@@ -33,7 +34,7 @@ export function flatMap<T, U>(
             count += 1;
 
             subscriptions.push(
-              Observable.from(callback(value)).subscribe({
+              from(callback(value)).subscribe({
                 ...observer,
                 complete
               })

@@ -1,8 +1,4 @@
-import {
-  fromEvent,
-  firstValueFrom,
-  filter
-} from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable";
 
 /**
  * This module contains utilities for testing.
@@ -52,7 +48,10 @@ export async function createIframe(
     ${await transpileHtml(srcDoc)}
   `;
 
-  const load = fromEvent(iframe, "load").pipe(firstValueFrom);
+  const load = Observable.fromEvent(iframe, "load").pipe(
+    Observable.firstValueFrom
+  );
+
   document.body.append(iframe);
 
   return load.then(
@@ -96,9 +95,9 @@ export async function createServiceWorker(src: string) {
 
   worker.onerror = (error) => console.log(error.message);
 
-  await fromEvent<Event>(worker, "statechange").pipe(
-    filter(() => worker.state === "installed"),
-    firstValueFrom
+  await Observable.fromEvent<Event>(worker, "statechange").pipe(
+    Observable.filter(() => worker.state === "installed"),
+    Observable.firstValueFrom
   );
 
   return [worker, registration] as const;
