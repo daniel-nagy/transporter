@@ -1,8 +1,8 @@
 import { expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import * as Fiber from './Fiber.js';
-import * as Supervisor from './Supervisor.js';
+import * as Fiber from "./Fiber.js";
+import * as Supervisor from "./Supervisor.js";
 
 test("observing a task", () => {
   const task = Fiber.init("0");

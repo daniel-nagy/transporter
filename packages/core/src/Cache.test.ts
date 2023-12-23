@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import * as Cache from './Cache.js';
+import * as Cache from "./Cache.js";
 
 test("memoizing a function", () => {
   const fn = spy(() => ({ ok: "👌" }));

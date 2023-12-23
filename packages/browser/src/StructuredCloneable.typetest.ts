@@ -1,8 +1,8 @@
 // These path imports are a workaround for https://github.com/JoshuaKGoldberg/eslint-plugin-expect-type/issues/101.
-import * as Injector from "../../../node_modules/@daniel-nagy/transporter/build/Injector.js";
-import * as Session from "../../../node_modules/@daniel-nagy/transporter/build/Session.js";
+import * as Injector from "../../../node_modules/@daniel-nagy/transporter/src/Injector.js";
+import * as Session from "../../../node_modules/@daniel-nagy/transporter/src/Session.js";
 import * as StructuredCloneable from "./StructuredCloneable.js";
-import * as Subprotocol from "../../../node_modules/@daniel-nagy/transporter/build/Subprotocol.js";
+import * as Subprotocol from "../../../node_modules/@daniel-nagy/transporter/src/Subprotocol.js";
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,

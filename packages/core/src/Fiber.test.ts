@@ -1,7 +1,7 @@
 import { expect, test } from "bun:test";
 import { spy } from "tinyspy";
 
-import * as Fiber from './Fiber.js';
+import * as Fiber from "./Fiber.js";
 
 test("a fiber is active when created", () => {
   expect(Fiber.init().state).toBe(Fiber.State.Active);

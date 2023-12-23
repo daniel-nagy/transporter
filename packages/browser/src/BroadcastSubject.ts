@@ -5,6 +5,8 @@ import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 
 import * as StructuredCloneable from "./StructuredCloneable.js";
 
+export { BroadcastSubject as t };
+
 type Observer<T> = Required<Observable.Observer<T>>;
 
 const protocol = Subprotocol.init({
