@@ -2,7 +2,7 @@ import { type SinonSpy, assert, match, spy, useFakeTimers } from "sinon";
 import * as Observable from "@daniel-nagy/transporter/Observable";
 
 import * as BrowserSocket from "./BrowserSocket.js";
-import * as BrowserSocketServer from "./BrowserSocketServer.js";
+import * as BrowserSocketServer from "../BrowserSocketServer.js";
 import * as Error from "./Error.js";
 import * as Message from "./Message.js";
 import * as State from "./State.js";
@@ -20,7 +20,7 @@ test("a child frame connecting to a parent frame", async () => {
 
   const srcDoc = /* html */ `
     <script type="module" data-transpile>
-      import * as BrowserSocket from "/packages/browser/src/BrowserSocket/BrowserSocket.ts";
+      import * as BrowserSocket from "/packages/browser/src/BrowserSocket/index.ts";
       using socket = BrowserSocket.connect(self.parent);
       socket.send("hi");
     </script>
@@ -33,7 +33,7 @@ test("a child frame connecting to a parent frame", async () => {
 test("a parent frame connecting to a child frame", async () => {
   const srcDoc = /* html */ `
     <script type="module" data-transpile>
-      import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+      import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
 
       BrowserSocketServer.listen().connect.subscribe((socket) => {
         socket.receive.subscribe((message) => {
@@ -56,7 +56,7 @@ test("a parent frame connecting to a child frame", async () => {
 
 test("a frame connecting to a dedicated worker", async () => {
   const worker = await Test.createWorker(/* ts */ `
-    import * as BrowserSocketServer from "http://localhost:8000/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+    import * as BrowserSocketServer from "http://localhost:8000/packages/browser/src/BrowserSocketServer.ts";
 
     BrowserSocketServer.listen().connect.subscribe((socket) => {
       socket.receive.subscribe((message) => {
@@ -77,7 +77,7 @@ test("a frame connecting to a dedicated worker", async () => {
 
 test("a frame connecting to a shared worker", async () => {
   const worker = await Test.createSharedWorker(/* ts */ `
-    import * as BrowserSocketServer from "http://localhost:8000/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+    import * as BrowserSocketServer from "http://localhost:8000/packages/browser/src/BrowserSocketServer.ts";
 
     BrowserSocketServer.listen().connect.subscribe((socket) => {
       socket.receive.subscribe((message) => {
@@ -100,7 +100,7 @@ describe("socket state transitions", () => {
   test("a socket starts in a connected state", async () => {
     const srcDoc = /* html */ `
       <script type="module" data-transpile>
-        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
         BrowserSocketServer.listen();
       </script>
     `;
@@ -113,7 +113,7 @@ describe("socket state transitions", () => {
   test("a socket transitions from a connecting state to a connected state once connected", async () => {
     const srcDoc = /* html */ `
       <script type="module" data-transpile>
-        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
         BrowserSocketServer.listen();
       </script>
     `;
@@ -128,7 +128,7 @@ describe("socket state transitions", () => {
   test("a socket transitions from a connecting state to a closing state if close is called before it is connected", async () => {
     const srcDoc = /* html */ `
       <script type="module" data-transpile>
-        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
         BrowserSocketServer.listen();
       </script>
     `;
@@ -180,7 +180,7 @@ describe("socket state transitions", () => {
   test("a socket transitions from a connecting state to a closing state if the buffer overflows", async () => {
     const srcDoc = /* html */ `
       <script type="module" data-transpile>
-        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
         BrowserSocketServer.listen();
       </script>
     `;
@@ -209,7 +209,7 @@ describe("socket state transitions", () => {
   test("a socket transitions from a connecting state to a closing state if the socket is disposed", async () => {
     const srcDoc = /* html */ `
       <script type="module" data-transpile>
-        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+        import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
         BrowserSocketServer.listen();
       </script>
     `;
@@ -376,7 +376,7 @@ test("the message port is closed when a socket is closed", async () => {
 test("passing an origin when connecting to a window", async () => {
   const srcDoc = /* html */ `
     <script type="module" data-transpile>
-      import * as BrowserSocketServer from "/packages/browser/src/BrowserSocket/BrowserSocketServer.ts";
+      import * as BrowserSocketServer from "/packages/browser/src/BrowserSocketServer.ts";
       BrowserSocketServer.listen();
     </script>
   `;

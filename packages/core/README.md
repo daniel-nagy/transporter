@@ -4,18 +4,23 @@ The core package contains APIs designed to work in any JavaScript runtime.
 
 ## Modules
 
+- [BehaviorSubject](#BehaviorSubject)
 - [Cache](#Cache)
 - [Injector](#Injector)
 - [Json](#Json)
+- [Message](#Message)
 - [Metadata](#Metadata)
 - [Observable](#Observable)
-- [Protocol](#Protocol)
-  - [Message](#Message)
-  - [Session](#Session)
-  - [Subprotocol](#Subprotocol)
 - [Proxy](#Proxy)
 - [PubSub](#Pubsub)
+- [Session](#Session)
+- [Subprotocol](#Subprotocol)
+- [Subject](#Subject)
 - [SuperJson](#Superjson)
+
+### BehaviorSubject
+
+A BehaviorSubject is a Subject that replays the last emitted value when subscribed to.
 
 ### Cache
 
@@ -56,6 +61,10 @@ The Proxy module is used to create proxy objects. Transporter will proxy these o
 ### PubSub
 
 The PubSub module is used to wrap an Observable so that it may be used for pub/sub. A PubSub is essentially an Observable who's subscribe and unsubscribe methods are asynchronous.
+
+### Subject
+
+A Subject is both an Observable and an Observer. A Subject can be used to multicast an Observable.
 
 ### SuperJson
 

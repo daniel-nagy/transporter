@@ -3,9 +3,10 @@ import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
 import * as Observable from "@daniel-nagy/transporter/Observable";
 import * as Subject from "@daniel-nagy/transporter/Subject";
 
-import * as BrowserSocket from "./BrowserSocket.js";
-import * as Message from "./Message.js";
-import * as StructuredCloneable from "../StructuredCloneable.js";
+import * as BrowserSocket from "./BrowserSocket/index.js";
+import * as StructuredCloneable from "./StructuredCloneable.js";
+
+import Message = BrowserSocket.Message;
 
 const ADDRESS_SPACE = "BrowserSocketServer";
 
