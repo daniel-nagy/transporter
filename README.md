@@ -39,7 +39,7 @@ Transporter may be used to build typesafe APIs for fullstack TypeScript applicat
 
 Transporter may be used in the browser to communicate with other browsing contexts (windows, tabs, iframes) or workers (dedicated workers, shared workers, service workers). The browser is ripe for distributed computing and parallel processing but not many developers take advantage of this because the `postMessage` API is very primitive.
 
-Transporter may also be used in React Native apps to communicate with webviews. You could take this to the extreme and build your entire native app as a Web app that is wrapped in a React Native shell. The Web app could use transporter to call out to the React Native app to access native APIs not available in the browser.
+Transporter may also be used in React Native apps to communicate with webviews. You could take this to the extreme and build your entire native app as a Web app that is wrapped in a React Native shell. The Web app could use Transporter to call out to the React Native app to access native APIs not available in the browser.
 
 ## Getting Started
 
@@ -53,5 +53,5 @@ As of beta 3 Transporter is nearing API stability but there may still be some br
 
 ### Packages
 
-* [core](/packages/core) - Core APIs that are designed to work in any JavaScript runtime.
-* [browser](/packages/browser) - Wrappers around the browser's messaging APIs that provide normalized interfaces and additional semantics.
+- [core](/packages/core) - Core APIs that are designed to work in any JavaScript runtime.
+- [browser](/packages/browser) - Wrappers around the browser's messaging APIs that provide normalized interfaces and additional semantics.
