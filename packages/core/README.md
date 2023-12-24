@@ -40,7 +40,35 @@ Transporter contains the following modules.
 
 ### BehaviorSubject
 
-<sup>_Module, Class_</sup>
+<sup>_Module_</sup>
+
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#BehaviorSubject">BehaviorSubject</a></li>
+  </ul>
+</sup>
+
+<sup>**Constructors**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Of">of</a></li>
+  </ul>
+</sup>
+
+<sup>**Methods**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#GetValue">getValue</a></li>
+  </ul>
+</sup>
+
+#### BehaviorSubject
+
+<sup>_Type_</sup>
 
 ```ts
 class BehaviorSubject<T> extends Subject<T> {}
@@ -84,11 +112,41 @@ import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
 BehaviorSubject.of("👍").getValue();
 ```
 
----
-
 ### Cache
 
-<sup>_Module, Class_</sup>
+<sup>_Module_</sup>
+
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Cache">Cache</a></li>
+  </ul>
+</sup>
+
+<sup>**Constructors**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Init">init</a></li>
+  </ul>
+</sup>
+
+<sup>**Methods**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Add">add</a></li>
+    <p></p>
+    <li><a href="#Get">get</a></li>
+    <p></p>
+    <li><a href="#Has">has</a></li>
+  </ul>
+</sup>
+
+#### Cache
+
+<sup>_Type_</sup>
 
 ```ts
 class Cache {}
@@ -157,6 +215,26 @@ import * as Cache from "@daniel-nagy/transporter/Cache";
 const identity = (value) => value;
 
 Cache.init().get(identity, "🥸"); // NotFound
+```
+
+#### Has
+
+<sup>_Method_</sup>
+
+```ts
+has(func: JsFunction.t, args?: SuperJson.t[]): boolean
+```
+
+Checks if the value is in the cache.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+
+Cache.init().has(identity, "🥸"); // false
 ```
 
 ---
