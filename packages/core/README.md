@@ -2,7 +2,21 @@
 
 The core package contains APIs designed to work in any JavaScript runtime.
 
-## Modules
+Transporter is distributed as ES modules. Generally speaking, modules encapsulate a type and export functions that act as either a constructor or operator on that type. The module has the same name as the type it encapsulates. You will often see this type reexported with the alias `t`. This is a common convention found in functional programming languages that allows dereferencing the type from the module without typing out the name twice, which feels icky. This makes using namespace imports with Transporter modules a bit nicer. For example,
+
+```typescript
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+// To access the type you need to type Observable twice 🤮.
+const observable: Observable.Observable = Observable.of(1, 2, 3);
+
+// Equivalent to the above. Not perfect but better.
+const observable: Observable.t = Observable.of(1, 2, 3);
+```
+
+Transporter makes heavy use of namespace imports internally. If that makes you concerned about tree-shaking then don't be. Webpack, Rollup, and esbuild all handle namespace imports fine. It is namespace exports that may be problematic when it comes to tree-shaking. Though both webpack and Rollup seem to handle those as well, making esbuild the standout.
+
+## API
 
 - [BehaviorSubject](#BehaviorSubject)
 - [Cache](#Cache)
