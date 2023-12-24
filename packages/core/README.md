@@ -141,6 +141,12 @@ BehaviorSubject.of("👍").getValue();
     <li><a href="#Get">get</a></li>
     <p></p>
     <li><a href="#Has">has</a></li>
+    <p></p>
+    <li><a href="#Memo">memo</a></li>
+    <p></p>
+    <li><a href="#Remove">remove</a></li>
+    <p></p>
+    <li><a href="#Update">update</a></li>
   </ul>
 </sup>
 
@@ -225,7 +231,7 @@ Cache.init().get(identity, "🥸"); // NotFound
 has(func: JsFunction.t, args?: SuperJson.t[]): boolean
 ```
 
-Checks if the value is in the cache.
+Checks if the value is in the cache. If no arguments are provided it will return `true` if any value is cached for the function.
 
 ##### Example
 
@@ -237,9 +243,81 @@ const identity = (value) => value;
 Cache.init().has(identity, "🥸"); // false
 ```
 
----
+#### Memo
+
+<sup>_Method_</sup>
+
+```ts
+memo<Args extends SuperJson.t[], Return>(
+  func: (...args: Args) => Return
+): (...args: Args) => Return
+```
+
+Takes a function as input and returns a memoized version of the same function as output. This is the preferred way of adding values to the cache.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+const cache = Cache.init();
+const memo = Cache.memo(identity);
+memo("🥸");
+cache.has(identity, "🥸"); // true
+```
+
+#### Remove
+
+<sup>_Method_</sup>
+
+```ts
+remove(func: JsFunction.t, args?: SuperJson.t[]): boolean
+```
+
+Removes a value from the cache. Returns `true` if the value was found and removed. If no arguments are provided then all values for that function will be removed.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+const cache = Cache.init();
+const memo = Cache.memo(identity);
+memo("🥸");
+cache.remove(identity, "🥸"); // true
+```
+
+#### Update
+
+<sup>_Method_</sup>
+
+```ts
+update<Args extends SuperJson.t[], Return>(
+  func: (...args: Args) => Return,
+  args: Args,
+  callback: (value: Return) => Return
+): void
+```
+
+Updates a value in the cache. The callback function will receive the current value in the cache. The next function call will return the new value. Does nothing if there is a cache miss on the value.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+const cache = Cache.init();
+const memo = Cache.memo(identity);
+memo("🥸");
+cache.update(identity, "🥸", () => "🤓");
+```
 
 ### Injector
+
+<sup>_Module_</sup>
 
 The Injector module is used for dependency injection.
 
