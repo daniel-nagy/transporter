@@ -2,6 +2,10 @@
 
 The core package contains APIs designed to work in any JavaScript runtime.
 
+```
+npm add @daniel-nagy/transporter
+```
+
 Transporter is distributed as ES modules. Generally speaking, modules encapsulate a type and export functions that act as either a constructor or operator on that type. The module has the same name as the type it encapsulates. You will often see this type reexported with the alias `t`. This is a common convention found in functional programming languages that allows dereferencing the type from the module without typing out the name twice, which feels icky. This makes using namespace imports with Transporter modules a bit nicer. For example,
 
 ```typescript
@@ -83,6 +87,8 @@ BehaviorSubject
   .of("👍")
   .getValue();
 ```
+
+---
 
 ### Cache
 
