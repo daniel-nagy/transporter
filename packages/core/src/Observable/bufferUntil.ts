@@ -22,7 +22,7 @@ export enum BufferOverflowStrategy {
   Error = "Error"
 }
 
-export type Options = {
+export type BufferOptions = {
   /**
    * The max capacity of the buffer.
    */
@@ -42,7 +42,7 @@ export function bufferUntil<T, S>(
   {
     limit = Infinity,
     overflowStrategy = BufferOverflowStrategy.Error
-  }: Options = {}
+  }: BufferOptions = {}
 ) {
   return (observable: ObservableLike<T>) =>
     new Observable<T>((observer) => {

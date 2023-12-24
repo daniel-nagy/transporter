@@ -572,7 +572,7 @@ Json.serialize({ name: "Jane Doe" });
 #### sortDeep
 
 ```ts
-function sortDeep(value: Json): Jsong;
+function sortDeep(value: Json): Json;
 ```
 
 Recursively sorts the properties of an object. Array values retain their sort order.
@@ -588,6 +588,7 @@ Json.sortDeep({
   a: "a"
 });
 
+// $ExpectType
 // {
 //   a: "a",
 //   b: [{ e: "e", f: "f" }, 12],
@@ -601,11 +602,148 @@ Json.sortDeep({
 
 The Metadata module allows information to be extracted from a proxy.
 
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Metadata">Metadata</a></li>
+  </ul>
+</sup>
+
+<sup>**Functions**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Get">get</a></li>
+  </ul>
+</sup>
+
+#### Metadata
+
+<sup>_Type_<sup>
+
+```ts
+type Metadata = {
+  /**
+   * The address of the server that provides the value.
+   */
+  address: string;
+  /**
+   * The path to the value in the original object.
+   */
+  objectPath: string[];
+};
+```
+
+Contains information about a proxy object.
+
+#### Get
+
+```ts
+function get<Proxy extends object>(proxy: Proxy): Metadata | null;
+```
+
+Returns metadata about a proxy. If the object is not a proxy it returns `null`.
+
+##### Example
+
+```ts
+import * as Metadata from "@daniel-nagy/transporter/Metadata";
+
+const metadata = Metadata.get(obj);
+```
+
 ### Observable
 
 <sup>_Module_</sup>
 
 The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar to [rxjs](https://rxjs.dev/). If you make heavy use of Observables then you may decide to use rxjs instead.
+
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#BufferOverflowError">BufferOverflowError</a></li>
+    <p></p>
+    <li><a href="#BufferOverflowStrategy">BufferOverflowStrategy</a></li>
+    <p></p>
+    <li><a href="#BufferOptions">BufferOptions</a></li>
+    <p></p>
+    <li><a href="#EmptyError">EmptyError</a></li>
+    <p></p>
+    <li><a href="#Event">Event</a></li>
+    <p></p>
+    <li><a href="#EventTarget">EventTarget</a></li>
+    <p></p>
+    <li><a href="#Observable">Observable</a></li>
+    <p></p>
+    <li><a href="#Observer">Observer</a></li>
+    <p></p>
+    <li><a href="#Operator">Operator</a></li>
+    <p></p>
+    <li><a href="#Subscription">Subscription</a></li>
+    <p></p>
+    <li><a href="#Subscription">State</a></li>
+    <p></p>
+    <li><a href="#TimeoutError">TimeoutError</a></li>
+  </ul>
+</sup>
+
+<sup>**Constructors**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Of">of</a></li>
+    <p></p>
+    <li><a href="#From">from</a></li>
+  </ul>
+</sup>
+
+<sup>**Methods**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Pipe">pipe</a></li>
+    <p></p>
+    <li><a href="#Subscribe">subscribe</a></li>
+  </ul>
+</sup>
+
+<sup>**Functions**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#BufferUntil">bufferUntil</a></li>
+    <p></p>
+    <li><a href="#CatchError">catchError</a></li>
+    <p></p>
+    <li><a href="#Cron">cron</a></li>
+    <p></p>
+    <li><a href="#Fail">fail</a></li>
+    <p></p>
+    <li><a href="#Filter">filter</a></li>
+    <p></p>
+    <li><a href="#FirstValueFrom">firstValueFrom</a></li>
+    <p></p>
+    <li><a href="#FlatMap">flatMap</a></li>
+    <p></p>
+    <li><a href="#FromEvent">fromEvent</a></li>
+    <p></p>
+    <li><a href="#Map">map</a></li>
+    <p></p>
+    <li><a href="#Merge">merge</a></li>
+    <p></p>
+    <li><a href="#Take">take</a></li>
+    <p></p>
+    <li><a href="#TakeUntil">takeUntil</a></li>
+    <p></p>
+    <li><a href="#Tap">tap</a></li>
+    <p></p>
+    <li><a href="#Timeout">timeout</a></li>
+    <p></p>
+    <li><a href="#ToObserver">toObserver</a></li>
+  </ul>
+</sup>
 
 ### Message
 
