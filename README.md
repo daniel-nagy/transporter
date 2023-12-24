@@ -1,5 +1,7 @@
 <div align="center">
-  <h1>Transporter</h1>
+  <div>
+    <img width="600px" src="https://github.com/daniel-nagy/transporter/assets/1622446/2d548e46-c66e-43d3-bf9e-f5b9845dbd69">
+  </div>
   <b>Typesafe distributed computing in TypeScript.</b>
 </div>
 
