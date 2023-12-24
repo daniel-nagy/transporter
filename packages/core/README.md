@@ -40,22 +40,20 @@ Transporter contains the following modules.
 
 ### BehaviorSubject
 
-The BehaviorSubject module represents a Subject that replays the most recent value when subscribed to.
-
-#### Types
+<sup>_Module, Class_</sup>
 
 ```ts
-class BehaviorSubject<T> extends Subject<T> {
-  getValue(): T
-}
+class BehaviorSubject<T> extends Subject<T> {}
 ```
 
-A `Subject` that replays the most recent value.
+A `BehaviorSubject` is a Subject that replays the most recent value when subscribed to.
 
-#### Constructors
+#### Of
+
+<sup>_Constructor_</sup>
 
 ```ts
-function of<T>(value: T): BehaviorSubject<T>
+function of<T>(value: T): BehaviorSubject<T>;
 ```
 
 Creates a new `BehaviorSubject` with an initial value of type `T`.
@@ -65,15 +63,15 @@ Creates a new `BehaviorSubject` with an initial value of type `T`.
 ```ts
 import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
 
-BehaviorSubject
-  .of("👍")
-  .subscribe(console.log);
+BehaviorSubject.of("👍").subscribe(console.log);
 ```
 
-#### Methods
+#### GetValue
+
+<sup>_Method_</sup>
 
 ```ts
-function BehaviorSubject<T>.getValue(): T
+getValue(): T;
 ```
 
 The `getValue` method can be used to synchronously retrieve the value held by the `BehaviorSubject`. If the `BehaviorSubject` is in an error state then `getValue` will throw the error.
@@ -83,16 +81,85 @@ The `getValue` method can be used to synchronously retrieve the value held by th
 ```ts
 import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
 
-BehaviorSubject
-  .of("👍")
-  .getValue();
+BehaviorSubject.of("👍").getValue();
 ```
 
 ---
 
 ### Cache
 
-The Cache module may be used to memoize remote function calls. Transporter guarantees that proxies are referentially stable so other memoization APIs are likely compatible with Transporter as well.
+<sup>_Module, Class_</sup>
+
+```ts
+class Cache {}
+```
+
+A `Cache` may be used to memoize remote function calls. Transporter guarantees that proxies are referentially stable so other memoization APIs are likely compatible with Transporter as well.
+
+In order to memoize a function its arguments must be serializable. A stable algorithm is used to serialize a function's arguments and index the cache. The Cache supports any arguments of type `SuperJson`.
+
+#### Init
+
+<sup>_Constructor_</sup>
+
+```ts
+function init(): Cache;
+```
+
+Creates a new `Cache`.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const cache = Cache.init();
+```
+
+#### Add
+
+<sup>_Method_</sup>
+
+```ts
+add(func: JsFunction.t, args: SuperJson.t[], value: unknown): void;
+```
+
+Adds the value to the cache for the specified function and arguments. Used internally by the `memo` method, which is the preferred way to add a value to the cache.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+
+Cache.init().add(identity, "🥸", "🥸");
+```
+
+#### Get
+
+<sup>_Method_</sup>
+
+```ts
+get<Args extends SuperJson.t[], Return>(
+  func: (...args: Args) => Return,
+  args: Args
+): Return | NotFound;
+```
+
+Get a value from the cache. Returns `NotFound` if the value does not exist.
+
+##### Example
+
+```ts
+import * as Cache from "@daniel-nagy/transporter/Cache";
+
+const identity = (value) => value;
+
+Cache.init().get(identity, "🥸"); // NotFound
+```
+
+---
 
 ### Injector
 
