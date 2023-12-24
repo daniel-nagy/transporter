@@ -321,42 +321,330 @@ cache.update(identity, "🥸", () => "🤓");
 
 The Injector module is used for dependency injection.
 
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Injector">Injector</a></li>
+    <p></p>
+    <li><a href="#Tag">Tag</a></li>
+  </ul>
+</sup>
+
+<sup>**Constructors**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Empty">empty</a></li>
+    <p></p>
+    <li><a href="#Tag">Tag</a></li>
+  </ul>
+</sup>
+
+<sup>**Methods**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Add">add</a></li>
+    <p></p>
+    <li><a href="#Get">get</a></li>
+  </ul>
+</sup>
+
+<sup>**Functions**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#GetTags">getTags</a></li>
+    <p></p>
+    <li><a href="#Provide">provide</a></li>
+  </ul>
+</sup>
+
+#### Injector
+
+<sup>_Type_</sup>
+
+```ts
+class Injector {}
+```
+
+An `Injector` is a dependency container. Values may be added or read from the container using tags.
+
+#### Tag
+
+<sup>_Type_<sup>
+
+```ts
+type Tag<Value> {}
+```
+
+A `Tag` is a value that is bound to a single dependency type and is used to index the container.
+
+#### Empty
+
+<sup>_Constructor_</sup>
+
+```ts
+function empty(): Injector;
+```
+
+Creates a new empty `Injector`.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+const injector = Injector.empty();
+```
+
+#### Tag
+
+<sup>_Constructor_</sup>
+
+```ts
+function Tag<T>(): Tag<T>;
+```
+
+Creates a new `Tag`.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+type Session = {
+  userId?: string;
+};
+
+const SessionTag = Injector.Tag<Session>();
+```
+
+#### Add
+
+<sup>_Method_</sup>
+
+```ts
+function add<Value>(tag: Tag<Value>, value: Value): Injector;
+```
+
+Adds a value to the container.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+type Session = {
+  userId?: string;
+};
+
+const SessionTag = Injector.Tag<Session>();
+const Session: Session = { userId: "User_123" };
+Injector.empty().add(SessionTag, Session);
+```
+
+#### Get
+
+<sup>_Method_</sup>
+
+```ts
+function get(tag: Tag<unknown>): unknown;
+```
+
+Gets a value from the container using a `Tag`.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+const tag = Injector.Tag<string>();
+Injector.empty().get(tag);
+```
+
+#### GetTags
+
+<sup>_Function_</sup>
+
+```ts
+function getTags(func: JsFunction.t): : Tag<unknown>[];
+```
+
+Returns a list of tags from a function returned by `provide`. If the function does not have DI metadata an empty list is returned.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+const getUser = Injector.provide([Prisma, Session], (prisma, session) =>
+  prisma.user.findUnique({ where: { id: session.userId } })
+);
+
+Injector.getTags(getUser);
+```
+
+#### Provide
+
+<sup>_Function_</sup>
+
+```ts
+function provide<
+  const Tags extends readonly Tag<unknown>[],
+  const Args extends [...Values<Tags>, ...unknown[]],
+  const Return
+>(
+  tags: Tags,
+  func: (...args: Args) => Return
+): (...args: JsArray.DropFirst<Args, JsArray.Length<Tags>>) => Return;
+```
+
+Returns a new function that has a list of tags stored as metadata. The call signature of the new function will omit any injected dependencies.
+
+##### Example
+
+```ts
+import * as Injector from "@daniel-nagy/transporter/Injector";
+
+const getUser = Injector.provide([Prisma, Session], (prisma, session) =>
+  prisma.user.findUnique({ where: { id: session.userId } })
+);
+```
+
 ### Json
+
+<sup>_Module_</sup>
 
 The Json module may be used as a subprotocol. If you are communicating between two JavaScript runtimes then you may use the [SuperJson](#Superjson) module for a better experience.
 
+<sup>**Types**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Json">Json</a></li>
+  </ul>
+</sup>
+
+<sup>**Functions**</sup>
+
+<sup>
+  <ul>
+    <li><a href="#Serialize">serialize</a></li>
+    <p></p>
+    <li><a href="#SortDeep">sortDeep</a></li>
+  </ul>
+</sup>
+
+#### Json
+
+<sup>_type_</sup>
+
+```ts
+export type Json =
+  | null
+  | number
+  | string
+  | boolean
+  | { [key: string]: Json }
+  | Json[];
+```
+
+Represents a JSON value.
+
+#### Serialize
+
+```ts
+function serialize(value: Json): string;
+```
+
+Serializes a JSON value in a way that is deterministic, such that 2 strings are equal if they encode the same value.
+
+##### Example
+
+```ts
+import * as Json from "@daniel-nagy/transporter/Json";
+
+Json.serialize({ name: "Jane Doe" });
+```
+
+#### sortDeep
+
+```ts
+function sortDeep(value: Json): Jsong;
+```
+
+Recursively sorts the properties of an object. Array values retain their sort order.
+
+##### Example
+
+```ts
+import * as Json from "@daniel-nagy/transporter/Json";
+
+Json.sortDeep({
+  c: "c",
+  b: [{ f: "f", e: "e" }, 12],
+  a: "a"
+});
+
+// {
+//   a: "a",
+//   b: [{ e: "e", f: "f" }, 12],
+//   c: "c"
+// }
+```
+
 ### Metadata
+
+<sup>_Module_</sup>
 
 The Metadata module allows information to be extracted from a proxy.
 
 ### Observable
 
+<sup>_Module_</sup>
+
 The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar to [rxjs](https://rxjs.dev/). If you make heavy use of Observables then you may decide to use rxjs instead.
 
 ### Message
+
+<sup>_Module_</sup>
 
 The Message module implements the Transporter message protocol.
 
 ### Session
 
+<sup>_Module_</sup>
+
 The Session module is used to create Transporter sessions.
 
 ### Subprotocol
+
+<sup>_Module_</sup>
 
 The Subprotocol module is used to provide typesafety on top of the Transporter protocol.
 
 ### Proxy
 
+<sup>_Module_</sup>
+
 The Proxy module is used to create proxy objects. Transporter will proxy these objects instead of cloning them.
 
 ### PubSub
+
+<sup>_Module_</sup>
 
 The PubSub module is used to wrap an Observable so that it may be used for pub/sub. A PubSub is essentially an Observable who's subscribe and unsubscribe methods are asynchronous.
 
 ### Subject
 
+<sup>_Module_</sup>
+
 A Subject is both an Observable and an Observer. A Subject can be used to multicast an Observable.
 
 ### SuperJson
+
+<sup>_Module_</sup>
 
 The SuperJson module extends the JSON protocol to include many built-in JavaScript types, including `Date`, `RegExp`, `Map`, ect.
