@@ -1,5 +1,6 @@
 import * as JsFunction from "./JsFunction.js";
 import * as Json from "./Json.js";
+import * as SuperJson from "./SuperJson.js";
 
 export { Cache as t };
 
@@ -45,23 +46,27 @@ export class Cache {
   /**
    * Add the return value of a function call to the cache.
    */
-  add(func: JsFunction.t, args: Json.t[], value: unknown) {
+  add(func: JsFunction.t, args: SuperJson.t[], value: unknown) {
     const cache = this.#state.get(func) ?? new Map();
-    this.#state.set(func, cache.set(Json.serialize(args), value));
+
+    this.#state.set(
+      func,
+      cache.set(Json.serialize(SuperJson.toJson(args)), value)
+    );
   }
 
   /**
    * Get the return value of a function call from the cache. Returns `NotFound`
    * if the value does not exist in the cache.
    */
-  get<Args extends Json.t[], Return>(
+  get<Args extends SuperJson.t[], Return>(
     func: (...args: Args) => Return,
     args: Args
   ): Return | NotFound {
     if (!this.#state.has(func)) return NotFound;
 
     const funcCache = this.#state.get(func)!;
-    const argsKey = Json.serialize(args);
+    const argsKey = Json.serialize(SuperJson.toJson(args));
 
     return funcCache.has(argsKey)
       ? (funcCache.get(argsKey) as Return)
@@ -72,16 +77,20 @@ export class Cache {
    * Checks to see if a value exists in the cache for a given function and
    * arguments.
    */
-  has(func: JsFunction.t, args?: Json.t[]): boolean {
+  has(func: JsFunction.t, args?: SuperJson.t[]): boolean {
     if (!args) return this.#state.has(func);
-    return this.#state.get(func)?.has(Json.serialize(args)) ?? false;
+
+    return (
+      this.#state.get(func)?.has(Json.serialize(SuperJson.toJson(args))) ??
+      false
+    );
   }
 
   /**
    * Wraps a function so that calling the wrapped function will automatically
    * read and write from the cache.
    */
-  memo<Args extends Json.t[], Return>(
+  memo<Args extends SuperJson.t[], Return>(
     func: (...args: Args) => Return
   ): (...args: Args) => Return {
     return (...args: Args) => {
@@ -94,16 +103,20 @@ export class Cache {
    * Remove a value from the cache. Returns `true` if the value was found and
    * removed.
    */
-  remove(func: JsFunction.t, args?: Json.t[]): boolean {
+  remove(func: JsFunction.t, args?: SuperJson.t[]): boolean {
     if (!args) return this.#state.delete(func);
-    return this.#state.get(func)?.delete(Json.serialize(args)) ?? false;
+
+    return (
+      this.#state.get(func)?.delete(Json.serialize(SuperJson.toJson(args))) ??
+      false
+    );
   }
 
   /**
    * Allows updating a value in the cache so that future calls return the new
    * value.
    */
-  update<Args extends Json.t[], Return>(
+  update<Args extends SuperJson.t[], Return>(
     func: (...args: Args) => Return,
     args: Args,
     callback: (value: Return) => Return
