@@ -18,6 +18,8 @@ Transporter makes heavy use of namespace imports internally. If that makes you c
 
 ## API
 
+Transporter contains the following modules.
+
 - [BehaviorSubject](#BehaviorSubject)
 - [Cache](#Cache)
 - [Injector](#Injector)
@@ -34,7 +36,53 @@ Transporter makes heavy use of namespace imports internally. If that makes you c
 
 ### BehaviorSubject
 
-A BehaviorSubject is a Subject that replays the last emitted value when subscribed to.
+The BehaviorSubject module represents a Subject that replays the most recent value when subscribed to.
+
+#### Types
+
+```ts
+class BehaviorSubject<T> extends Subject<T> {
+  getValue(): T
+}
+```
+
+A `Subject` that replays the most recent value.
+
+#### Constructors
+
+```ts
+function of<T>(value: T): BehaviorSubject<T>
+```
+
+Creates a new `BehaviorSubject` with an initial value of type `T`.
+
+##### Example
+
+```ts
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
+
+BehaviorSubject
+  .of("👍")
+  .subscribe(console.log);
+```
+
+#### Methods
+
+```ts
+function BehaviorSubject<T>.getValue(): T
+```
+
+The `getValue` method can be used to synchronously retrieve the value held by the `BehaviorSubject`. If the `BehaviorSubject` is in an error state then `getValue` will throw the error.
+
+##### Example
+
+```ts
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
+
+BehaviorSubject
+  .of("👍")
+  .getValue();
+```
 
 ### Cache
 
