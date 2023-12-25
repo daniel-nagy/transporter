@@ -659,6 +659,10 @@ const metadata = Metadata.get(obj);
 
 The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar to [rxjs](https://rxjs.dev/). If you make heavy use of Observables then you may decide to use rxjs instead.
 
+Transporter observables should have interop with rxjs observables. If you encounter issues transforming to and from rxjs observables you may create a bug ticket.
+
+Transporter operators may behave differently than rxjs operators of the same name.
+
 <sup>**Types**</sup>
 
 <sup>
@@ -676,6 +680,8 @@ The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar t
     <li><a href="#EventTarget">EventTarget</a></li>
     <p></p>
     <li><a href="#Observable">Observable</a></li>
+    <p></p>
+    <li><a href="#ObservableLike">ObservableLike</a></li>
     <p></p>
     <li><a href="#Observer">Observer</a></li>
     <p></p>
@@ -744,6 +750,177 @@ The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar t
     <li><a href="#ToObserver">toObserver</a></li>
   </ul>
 </sup>
+
+#### BufferOverflowError
+
+<sup>_Type_</sup>
+
+```ts
+class BufferOverflowError extends Error {}
+```
+
+Thrown if a buffer overflow occurs and the buffer overflow strategy is `Error`.
+
+#### BufferOverflowStrategy
+
+<sup>_Type_</sup>
+
+```ts
+enum BufferOverflowStrategy {
+  /**
+   * Discard new values as they arrive.
+   */
+  DropLatest = "DropLatest",
+  /**
+   * Discard old values making room for new values.
+   */
+  DropOldest = "DropOldest",
+  /**
+   * Error if adding a new value to the buffer will cause an overflow.
+   */
+  Error = "Error"
+}
+```
+
+Specifies what to do in the event of a buffer overflow.
+
+#### BufferOptions
+
+<sup>_Type_</sup>
+
+```ts
+type BufferOptions = {
+  /**
+   * The max capacity of the buffer.
+   */
+  limit?: number;
+  /**
+   * How to handle a buffer overflow scenario.
+   */
+  overflowStrategy?: BufferOverflowStrategy;
+};
+```
+
+Options for operators that perform buffering.
+
+#### EmptyError
+
+<sup>_Type_</sup>
+
+```ts
+class EmptyError extends Error {}
+```
+
+May be thrown by operators that expect a value to be emitted if the observable completes before emitting a single value.
+
+#### Event
+
+<sup>_Type_</sup>
+
+```ts
+interface Event {
+  type: string;
+}
+```
+
+Represents a JavaScript event. Necessary since Transporter does not include types for a specific runtime.
+
+#### EventTarget
+
+<sup>_Type_</sup>
+
+```ts
+interface EventTarget {
+  addEventListener(type: string, callback: (event: Event) => void): void;
+  dispatchEvent(event: Event): boolean;
+  removeEventListener(type: string, callback: (event: Event) => void): void;
+}
+```
+
+Represents a JavaScript event target. Necessary since Transporter does not include types for a specific runtime.
+
+#### Observable
+
+<sup>_Type_</sup>
+
+```ts
+class Observable<T> implements ObservableLike<T> {}
+```
+
+Observables are lazy push data structures that can emit values both synchronously and asynchronously. Observables are unicast and, unlike promises, may never emit a value or may emit many values.
+
+#### ObservableLike
+
+<sup>_Type_</sup>
+
+```ts
+interface ObservableLike<T> {
+  subscribe(observerOrNext?: Observer<T> | ((value: T) => void)): Subscription;
+}
+```
+
+A value is `ObservableLike` if it has a `subscribe` method that takes a function or `Observer` as input and returns a `Subscription`.
+
+#### Observer
+
+<sup>_Type_</sup>
+
+```ts
+type Observer<T> = {
+  next?(value: T): void;
+  error?(error: unknown): void;
+  complete?(): void;
+};
+```
+
+An `Observer` subscribes to an observable.
+
+#### Operator
+
+<sup>_Type_</sup>
+
+```ts
+type Operator<T, U> = (observable: ObservableLike<T>) => ObservableLike<U>;
+```
+
+An `Operator` is a function that takes an observable as input and returns anew observable as output.
+
+#### Subscription
+
+<sup>_Type_</sup>
+
+```ts
+type Subscription = {
+  unsubscribe(): void;
+};
+```
+
+A `Subscription` is returned when an observer subscribes to an observable.
+
+#### State
+
+<sup>_Type_</sup>
+
+```ts
+enum State {
+  Complete = "Complete",
+  Error = "Error",
+  NotComplete = "NotComplete",
+  Unsubscribed = "Unsubscribed"
+}
+```
+
+A discriminated type for the different states of an observable.
+
+#### TimeoutError
+
+<sup>_Type_</sup>
+
+```ts
+class TimeoutError extends Error {}
+```
+
+Thrown by the `timeout` operator if a value is not emitted within the specified amount of time.
 
 ### Message
 

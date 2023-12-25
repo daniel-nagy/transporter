@@ -42,7 +42,7 @@ export enum State {
 /**
  * Observables are lazy push data structures that can emit values both
  * synchronously and asynchronously. Observables are unicast and, unlike
- * promises, an observable may never emit or it may emit multiple values.
+ * promises, may never emit a value or may emit many values.
  *
  * @example
  *
