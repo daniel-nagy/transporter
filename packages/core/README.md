@@ -699,9 +699,15 @@ Transporter operators may behave differently than rxjs operators of the same nam
 
 <sup>
   <ul>
-    <li><a href="#Of">of</a></li>
+    <li><a href="#Cron">cron</a></li>
+    <p></p>
+    <li><a href="#Fail">fail</a></li>
     <p></p>
     <li><a href="#From">from</a></li>
+    <p></p>
+    <li><a href="#FromEvent">fromEvent</a></li>
+    <p></p>
+    <li><a href="#Of">of</a></li>
   </ul>
 </sup>
 
@@ -723,17 +729,11 @@ Transporter operators may behave differently than rxjs operators of the same nam
     <p></p>
     <li><a href="#CatchError">catchError</a></li>
     <p></p>
-    <li><a href="#Cron">cron</a></li>
-    <p></p>
-    <li><a href="#Fail">fail</a></li>
-    <p></p>
     <li><a href="#Filter">filter</a></li>
     <p></p>
     <li><a href="#FirstValueFrom">firstValueFrom</a></li>
     <p></p>
     <li><a href="#FlatMap">flatMap</a></li>
-    <p></p>
-    <li><a href="#FromEvent">fromEvent</a></li>
     <p></p>
     <li><a href="#Map">map</a></li>
     <p></p>
@@ -883,7 +883,7 @@ An `Observer` subscribes to an observable.
 type Operator<T, U> = (observable: ObservableLike<T>) => ObservableLike<U>;
 ```
 
-An `Operator` is a function that takes an observable as input and returns anew observable as output.
+An `Operator` is a function that takes an observable as input and returns a new observable as output.
 
 #### Subscription
 
@@ -921,6 +921,192 @@ class TimeoutError extends Error {}
 ```
 
 Thrown by the `timeout` operator if a value is not emitted within the specified amount of time.
+
+#### Cron
+
+<sup>_Constructor_</sup>
+
+```ts
+function cron<T>(
+  interval: number,
+  callback: () => T | Promise<T>
+): Observable<T>;
+```
+
+Creates an observable that calls a function at a regular interval and emits the value returned by that function.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.cron(1000, () => Math.random()).subscribe(console.log);
+```
+
+#### Fail
+
+<sup>_Constructor_</sup>
+
+```ts
+function fail<E>(errorOrCallback: E | (() => E)): Observable<never>;
+```
+
+Creates an observable that will immediately error with the provided value. If the value is a function then the function will be called to get the value.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.fail("💩");
+```
+
+#### From
+
+<sup>_Constructor_</sup>
+
+```ts
+function from<T>(observable: ObservableLike<T> | PromiseLike<T>): Observable<T>;
+```
+
+Creates a new `Observable` from an object that is observable like or promise like.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.from(Promise.resolve("👍"));
+```
+
+#### FromEvent
+
+<sup>_Constructor_</sup>
+
+```ts
+function function fromEvent<T extends Event>(target: EventTarget, type: string): Observable<T>;
+```
+
+Creates a hot observable from an event target and an event type.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.fromEvent(button, "click");
+```
+
+#### Of
+
+<sup>_Constructor_</sup>
+
+```ts
+function of<T>(...values: [T, ...T[]]): Observable<T>;
+```
+
+Creates a new `Observable` that emits each argument synchronously and then completes.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3).subscribe(console.log);
+```
+
+#### Pipe
+
+<sup>_Method_</sup>
+
+```ts
+pipe<A, B, ..., M, N>(
+    ...operations: [Operator<A, B>, ..., Operator<M, N>]
+  ): Observable<N>
+```
+
+Allows chaining operators to perform flow control.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, "2", 3, 4.5).pipe(
+  filter(Number.isInteger),
+  map((num) => num * 2)
+);
+```
+
+#### Subscribe
+
+<sup>_Method_</sup>
+
+```ts
+subscribe(observerOrNext?: Observer<T> | ((value: T) => void)): Subscription
+```
+
+Causes an `Observer` to start receiving values from an observable as they are emitted.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3).subscribe(console.log);
+```
+
+#### BufferUntil
+
+<sup>_Function_</sup>
+
+```ts
+bufferUntil<T, S>(
+  signal: ObservableLike<S>,
+  {
+    limit = Infinity,
+    overflowStrategy = BufferOverflowStrategy.Error
+  }: BufferOptions = {}
+): Observable<T>
+```
+
+Buffers emitted values until a signal emits or completes. Once the signal emits or completes the buffered values will be emitted synchronously.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Subject from "@daniel-nagy/transporter/Subject";
+
+const signal = Subject.init();
+Observable.of(1, 2, 3).pipe(bufferUntil(signal)).subscribe(console.log);
+setTimeout(() => signal.next(), 2000);
+```
+
+#### CatchError
+
+<sup>_Function_</sup>
+
+```ts
+function catchError<T>(
+  callback: <E>(error: E) => ObservableLike<T>
+): Observable<T>;
+```
+
+Catches an error emitted by an upstream observable. The callback function can return a new observable to recover from the error. The new observable will completely replace the old one.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3)
+  .pipe(
+    Observable.flatMap(() => Observable.fail("💩")),
+    Observable.catchError(() => Observable.of(4, 5, 6))
+  )
+  .subscribe(console.log);
+```
 
 ### Message
 
