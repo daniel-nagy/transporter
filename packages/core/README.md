@@ -42,29 +42,17 @@ Transporter contains the following modules.
 
 <sup>_Module_</sup>
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#BehaviorSubject">BehaviorSubject</a></li>
-  </ul>
-</sup>
+- [BehaviorSubject](#BehaviorSubject)
 
-<sup>**Constructors**</sup>
+###### Constructors
 
-<sup>
-  <ul>
-    <li><a href="#Of">of</a></li>
-  </ul>
-</sup>
+- [of](#Of)
 
-<sup>**Methods**</sup>
+###### Methods
 
-<sup>
-  <ul>
-    <li><a href="#GetValue">getValue</a></li>
-  </ul>
-</sup>
+- [getValue](#GetValue)
 
 #### BehaviorSubject
 
@@ -116,39 +104,22 @@ BehaviorSubject.of("👍").getValue();
 
 <sup>_Module_</sup>
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#Cache">Cache</a></li>
-  </ul>
-</sup>
+- [Cache](#Cache)
 
-<sup>**Constructors**</sup>
+###### Constructors
 
-<sup>
-  <ul>
-    <li><a href="#Init">init</a></li>
-  </ul>
-</sup>
+- [init](#Init)
 
-<sup>**Methods**</sup>
+###### Methods
 
-<sup>
-  <ul>
-    <li><a href="#Add">add</a></li>
-    <p></p>
-    <li><a href="#Get">get</a></li>
-    <p></p>
-    <li><a href="#Has">has</a></li>
-    <p></p>
-    <li><a href="#Memo">memo</a></li>
-    <p></p>
-    <li><a href="#Remove">remove</a></li>
-    <p></p>
-    <li><a href="#Update">update</a></li>
-  </ul>
-</sup>
+- [add](#Add)
+- [get](#Get)
+- [has](#Has)
+- [memo](#Memo)
+- [remove](#Remove)
+- [update](#Update)
 
 #### Cache
 
@@ -321,45 +292,25 @@ cache.update(identity, "🥸", () => "🤓");
 
 The Injector module is used for dependency injection.
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#Injector">Injector</a></li>
-    <p></p>
-    <li><a href="#Tag">Tag</a></li>
-  </ul>
-</sup>
+- [Injector](#Injector)
+- [Tag](#Tag)
 
-<sup>**Constructors**</sup>
+###### Constructors
 
-<sup>
-  <ul>
-    <li><a href="#Empty">empty</a></li>
-    <p></p>
-    <li><a href="#Tag">Tag</a></li>
-  </ul>
-</sup>
+- [empty](#Empty)
+- [Tag](#Tag)
 
-<sup>**Methods**</sup>
+###### Methods
 
-<sup>
-  <ul>
-    <li><a href="#Add">add</a></li>
-    <p></p>
-    <li><a href="#Get">get</a></li>
-  </ul>
-</sup>
+- [add](#Add)
+- [get](#Get)
 
-<sup>**Functions**</sup>
+###### Functions
 
-<sup>
-  <ul>
-    <li><a href="#GetTags">getTags</a></li>
-    <p></p>
-    <li><a href="#Provide">provide</a></li>
-  </ul>
-</sup>
+- [getTags](#GetTags)
+- [provide](#Provide)
 
 #### Injector
 
@@ -519,23 +470,14 @@ const getUser = Injector.provide([Prisma, Session], (prisma, session) =>
 
 The Json module may be used as a subprotocol. If you are communicating between two JavaScript runtimes then you may use the [SuperJson](#Superjson) module for a better experience.
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#Json">Json</a></li>
-  </ul>
-</sup>
+- [Json](#Json)
 
-<sup>**Functions**</sup>
+###### Functions
 
-<sup>
-  <ul>
-    <li><a href="#Serialize">serialize</a></li>
-    <p></p>
-    <li><a href="#SortDeep">sortDeep</a></li>
-  </ul>
-</sup>
+- [serialize](#Serialize)
+- [sortDeep](#SortDeep)
 
 #### Json
 
@@ -602,21 +544,13 @@ Json.sortDeep({
 
 The Metadata module allows information to be extracted from a proxy.
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#Metadata">Metadata</a></li>
-  </ul>
-</sup>
+- [Metadata](#Metadata)
 
-<sup>**Functions**</sup>
+###### Functions
 
-<sup>
-  <ul>
-    <li><a href="#Get">get</a></li>
-  </ul>
-</sup>
+- [get](#Get)
 
 #### Metadata
 
@@ -663,93 +597,49 @@ Transporter observables should have interop with rxjs observables. If you encoun
 
 Transporter operators may behave differently than rxjs operators of the same name.
 
-<sup>**Types**</sup>
+###### Types
 
-<sup>
-  <ul>
-    <li><a href="#BufferOverflowError">BufferOverflowError</a></li>
-    <p></p>
-    <li><a href="#BufferOverflowStrategy">BufferOverflowStrategy</a></li>
-    <p></p>
-    <li><a href="#BufferOptions">BufferOptions</a></li>
-    <p></p>
-    <li><a href="#EmptyError">EmptyError</a></li>
-    <p></p>
-    <li><a href="#Event">Event</a></li>
-    <p></p>
-    <li><a href="#EventTarget">EventTarget</a></li>
-    <p></p>
-    <li><a href="#Observable">Observable</a></li>
-    <p></p>
-    <li><a href="#ObservableLike">ObservableLike</a></li>
-    <p></p>
-    <li><a href="#Observer">Observer</a></li>
-    <p></p>
-    <li><a href="#Operator">Operator</a></li>
-    <p></p>
-    <li><a href="#Subscription">Subscription</a></li>
-    <p></p>
-    <li><a href="#Subscription">State</a></li>
-    <p></p>
-    <li><a href="#TimeoutError">TimeoutError</a></li>
-  </ul>
-</sup>
+- [BufferOverflowError](#BufferOverflowError)
+- [BufferOverflowStrategy](#BufferOverflowStrategy)
+- [BufferOptions](#BufferOptions)
+- [EmptyError](#EmptyError)
+- [Event](#Event)
+- [EventTarget](#EventTarget)
+- [Observable](#Observable)
+- [ObservableLike](#ObservableLike)
+- [Observer](#Observer)
+- [Operator](#Operator)
+- [Subscription](#Subscription)
+- [State](#Subscription)
+- [TimeoutError](#TimeoutError)
 
-<sup>**Constructors**</sup>
+###### Constructors
 
-<sup>
-  <ul>
-    <li><a href="#Cron">cron</a></li>
-    <p></p>
-    <li><a href="#Fail">fail</a></li>
-    <p></p>
-    <li><a href="#From">from</a></li>
-    <p></p>
-    <li><a href="#FromEvent">fromEvent</a></li>
-    <p></p>
-    <li><a href="#Of">of</a></li>
-  </ul>
-</sup>
+- [cron](#Cron)
+- [fail](#Fail)
+- [from](#From)
+- [fromEvent](#FromEvent)
+- [of](#Of)
 
-<sup>**Methods**</sup>
+###### Methods
 
-<sup>
-  <ul>
-    <li><a href="#Pipe">pipe</a></li>
-    <p></p>
-    <li><a href="#Subscribe">subscribe</a></li>
-  </ul>
-</sup>
+- [pipe](#Pipe)
+- [subscribe](#Subscribe)
 
-<sup>**Functions**</sup>
+###### Functions
 
-<sup>
-  <ul>
-    <li><a href="#BufferUntil">bufferUntil</a></li>
-    <p></p>
-    <li><a href="#CatchError">catchError</a></li>
-    <p></p>
-    <li><a href="#Filter">filter</a></li>
-    <p></p>
-    <li><a href="#FirstValueFrom">firstValueFrom</a></li>
-    <p></p>
-    <li><a href="#FlatMap">flatMap</a></li>
-    <p></p>
-    <li><a href="#Map">map</a></li>
-    <p></p>
-    <li><a href="#Merge">merge</a></li>
-    <p></p>
-    <li><a href="#Take">take</a></li>
-    <p></p>
-    <li><a href="#TakeUntil">takeUntil</a></li>
-    <p></p>
-    <li><a href="#Tap">tap</a></li>
-    <p></p>
-    <li><a href="#Timeout">timeout</a></li>
-    <p></p>
-    <li><a href="#ToObserver">toObserver</a></li>
-  </ul>
-</sup>
+- [bufferUntil](#BufferUntil)
+- [catchError](#CatchError)
+- [filter](#Filter)
+- [firstValueFrom](#FirstValueFrom)
+- [flatMap](#FlatMap)
+- [map](#Map)
+- [merge](#Merge)
+- [take](#Take)
+- [takeUntil](#TakeUntil)
+- [tap](#Tap)
+- [timeout](#Timeout)
+- [toObserver](#ToObserver)
 
 #### BufferOverflowError
 
