@@ -1504,7 +1504,7 @@ const proxy = Proxy.from({
 function isProxy<T extends object, U>(value: Proxy<T> | U): value is Proxy<T>;
 ```
 
-Returns `true`` if the object is a `Proxy`.
+Returns `true` if the object is a `Proxy`.
 
 ##### Example
 
@@ -1523,6 +1523,74 @@ Proxy.isProxy(proxy); // true
 <sup>_Module_</sup>
 
 The PubSub module is used to wrap an Observable so that it may be used for pub/sub. A PubSub is essentially an Observable who's subscribe and unsubscribe methods are asynchronous.
+
+###### Types
+
+- [AsyncObserver](#AsyncObserver)
+- [PubSub](#PubSub)
+- [RemoteSubscription](#RemoteSubscription)
+
+###### Constructors
+
+- [from](#From)
+
+#### AsyncObserver
+
+<sup>_Type_</sup>
+
+```ts
+type AsyncObserver<T> = {
+  next?(value: T): Promise<void>;
+  error?(error: unknown): Promise<void>;
+  complete?(): Promise<void>;
+};
+```
+
+An `Observer` who's methods are asynchronous.
+
+#### PubSub
+
+<sup>_Type_</sup>
+
+```ts
+interface PubSub<T> {
+  subscribe(
+    observerOrNext: AsyncObserver<T> | ((value: T) => Promise<void>)
+  ): Promise<RemoteSubscription>;
+}
+```
+
+An `Observable` who's subscribe method is asynchronous.
+
+#### RemoteSubscription
+
+<sup>_Type_</sup>
+
+```ts
+type RemoteSubscription = {
+  unsubscribe(): Promise<void>;
+};
+```
+
+A `Subscription` that returns a promise when unsubscribed.
+
+#### From
+
+<sup>_Constructor_</sup>
+
+```ts
+function from<T>(observable: Observable.ObservableLike<T>): PubSub<T>;
+```
+
+Turns an ordinary observable into an asynchronous one.
+
+##### Example
+
+```ts
+import * as PubSub from "@daniel-nagy/transporter/PubSub";
+
+const pubSub = PubSub.from(Observable.of(1, 2, 3));
+```
 
 ### Session
 
