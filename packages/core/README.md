@@ -452,16 +452,23 @@ function provide<
 ): (...args: JsArray.DropFirst<Args, JsArray.Length<Tags>>) => Return;
 ```
 
-Returns a new function that has a list of tags stored as metadata. The call signature of the new function will omit any injected dependencies.
+Returns a new function that has a list of tags stored as metadata. The call signature of the new function will omit any injected dependencies. Type parameters of generic functions will be propagated to the new function.
 
 ##### Example
 
 ```ts
 import * as Injector from "@daniel-nagy/transporter/Injector";
 
-const getUser = Injector.provide([Prisma, Session], (prisma, session) =>
-  prisma.user.findUnique({ where: { id: session.userId } })
+const getUser = Injector.provide(
+  [Prisma, Session],
+  <S extends Prisma.UserSelect>(prisma, session, select: S) =>
+    prisma.user.findUnique({ where: { id: session.userId }, select })
 );
+
+// $ExpectType
+// const getUser = <S extends Prisma.UserSelect>(
+//   select: S
+// ) => Prisma.Prisma__User<S> | null;
 ```
 
 ### Json
@@ -1433,6 +1440,83 @@ const observer = toObserver(identity);
 <sup>_Module_</sup>
 
 The Proxy module is used to create proxy objects. Transporter will proxy these objects instead of cloning them.
+
+###### Types
+
+- [Proxy](#Proxy)
+
+###### Constructors
+
+- [from](#From)
+
+###### Functions
+
+- [isProxy](#IsProxy)
+
+#### Proxy
+
+<sup>_Type_</sup>
+
+```ts
+type Proxy<T extends object> = JsObject.ReadonlyDeep<
+  JsObject.PickDeep<T, JsFunction.t | PubSub.t>
+>;
+```
+
+A `Proxy` is a readonly object who's properties are functions.
+
+#### Proxy
+
+<sup>_Constructor_</sup>
+
+```ts
+function from<T extends object>(value: T): Proxy<T>;
+```
+
+Creates a proxy from any object. The resulting object will be readonly and only
+functions will remain as properties.
+
+##### Example
+
+```ts
+import * as Proxy from "@daniel-nagy/transporter/Proxy";
+
+const proxy = Proxy.from({
+  a: "a",
+  b: async () => "👍",
+  c: [12, async () => "👌"]
+});
+
+// $ExpectType
+// {
+//   readonly b: async () => "👍",
+//   readonly c: {
+//     readonly 1: async () => "👌"
+//   }
+// }
+```
+
+#### IsProxy
+
+<sup>_Function_</sup>
+
+```ts
+function isProxy<T extends object, U>(value: Proxy<T> | U): value is Proxy<T>;
+```
+
+Returns `true`` if the object is a `Proxy`.
+
+##### Example
+
+```ts
+import * as Proxy from "@daniel-nagy/transporter/Proxy";
+
+const proxy = Proxy.from({
+  b: async () => "👍"
+});
+
+Proxy.isProxy(proxy); // true
+```
 
 ### PubSub
 
