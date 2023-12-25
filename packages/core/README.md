@@ -1596,7 +1596,203 @@ const pubSub = PubSub.from(Observable.of(1, 2, 3));
 
 <sup>_Module_</sup>
 
-The Session module is used to create Transporter sessions.
+The Session module is used to create client and server sessions.
+
+###### Types
+
+- [Agent](#Agent)
+- [ClientOptions](#ClientOptions)
+- [ClientSession](#ClientSession)
+- [Resource] (#Resource)
+- [ServerOptions](#ServerOptions)
+- [ServerSession](#ServerSession)
+- [Session](#Session)
+
+###### Constants
+
+- [rootSupervisor](#RootSupervisor)
+
+###### Constructors
+
+- [client](#Client)
+- [Resource] (#Resource)
+- [server](#Server)
+
+###### Methods
+
+- [terminate](#Terminate)
+
+#### Agent
+
+<sup>_Type_</sup>
+
+```ts
+type Agent = ClientAgent.t | ServerAgent.t;
+```
+
+An `Agent` is a background task that manages a single resource and fulfills the
+Transporter protocol.
+
+#### ClientOptions
+
+<sup>_Type_</sup>
+
+```ts
+interface ClientOptions<Protocol, Value> {
+  injector?: Injector.t;
+  protocol: Subprotocol<Protocol, Value>;
+  resource: Resource<Value>;
+}
+```
+
+Options for creating a `ClientSession`.
+
+#### ClientSession
+
+<sup>_Type_</sup>
+
+```ts
+class ClientSession<Protocol, Value> extends Session<Protocol, Value> {
+  createProxy(): Proxy.t<Value>;
+}
+```
+
+A `ClientSession` is created on the client to proxy a remote resource.
+
+#### Resource
+
+<sup>_Type_</sup>
+
+```ts
+interface Resource<Value> {}
+```
+
+A `Resource` is a value that is provided by a server.
+
+#### ServerOptions
+
+<sup>_Type_</sup>
+
+```ts
+interface ServerOptions<Protocol, Value> {
+  injector?: Injector.t;
+  protocol: Subprotocol<Protocol, Value>;
+  provide: Value;
+}
+```
+
+Options for creating a `ServerSession`.
+
+#### ServerSession
+
+<sup>_Type_</sup>
+
+```ts
+class ServerSession<Protocol, Value> extends Session<Protocol, Value> {}
+```
+
+A `ServerSession` is created on the server to provide a resource.
+
+#### Session
+
+<sup>_Type_</sup>
+
+```ts
+abstract class Session<Protocol, Value> extends Supervisor.t<Agent> {
+  readonly injector?: Injector.t;
+  readonly input: Observable.Observer<Message.t<Protocol>>;
+  readonly output: Observable.t<Message.t<Protocol>>;
+  readonly protocol: Subprotocol<Protocol, Value>;
+}
+```
+
+A `Session` spawns and observes agents. A session may spawn multiple server or client agents while active. Terminating a session will terminate all agents spawned by the session that are still active.
+
+If all agents spawned by the session are terminated then the session is automatically terminated.
+
+#### Client
+
+<sup>_Constructor_</sup>
+
+```ts
+function client<Protocol, Value>(
+  options: ClientOptions<Protocol, Value>
+): ClientSession<Protocol, Value>;
+```
+
+Creates a new `ClientSession`.
+
+##### Example
+
+```ts
+import * as Session from "@daniel-nagy/transporter/Session";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+import type { Api } from "...";
+
+const httpProtocol = Subprotocol.init({
+  connectionMode: Subprotocol.ConnectionMode.ConnectionLess,
+  operationMode: Subprotocol.OperationMode.Unicast,
+  protocol: Subprotocol.Protocol<SuperJson.t>(),
+  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
+});
+
+const session = Session.client({
+  protocol: httpProtocol,
+  resource: Session.Resource<Api>()
+});
+
+const client = session.createProxy();
+```
+
+#### Server
+
+<sup>_Constructor_</sup>
+
+```ts
+function server<Protocol, Value>(
+  options: ServerOptions<Protocol, Value>
+): ServerSession<Protocol, Value>;
+```
+
+Creates a new `ServerSession`.
+
+##### Example
+
+```ts
+import * as Session from "@daniel-nagy/transporter/Session";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+module User {
+  export async greet = () => "👋"
+}
+
+const httpProtocol = Subprotocol.init({
+  connectionMode: Subprotocol.ConnectionMode.ConnectionLess,
+  operationMode: Subprotocol.OperationMode.Unicast,
+  protocol: Subprotocol.Protocol<SuperJson.t>(),
+  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
+});
+
+const session = Session.server({
+  protocol: httpProtocol,
+  provide: {
+    User
+  }
+});
+```
+
+##### Terminate
+
+<sup>_Method_</sup>
+
+```ts
+terminate(): void;
+```
+
+Terminates the session. Terminating the session will complete its input and output and terminate all currently active agents.
 
 ### Subject
 
