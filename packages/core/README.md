@@ -1218,7 +1218,215 @@ const observer = toObserver(identity);
 
 <sup>_Module_</sup>
 
-The Message module implements the Transporter message protocol.
+The Message module implements the Transporter message protocol. The creation and interpretation of messages should be considered internal. However, it is ok to intercept message and perform your own logic or encoding.
+
+###### Types
+
+- [CallFunction](#CallFunction)
+- [Error](#Error)
+- [GarbageCollect](#GarbageCollect)
+- [Message](#Message)
+- [SetValue](#SetValue)
+- [Type](#Type)
+- [Version](#Version)
+
+###### Constants
+
+- [protocol](#Protocol)
+- [version](#Version)
+
+###### Functions
+
+- [isCompatible](#IsCompatible)
+- [isMessage](#IsMessage)
+- [parseVersion](#ParseVersion)
+
+#### CallFunction
+
+<sup>_Type_</sup>
+
+```ts
+type CallFunction<Args> = {
+  readonly address: string;
+  readonly args: Args;
+  readonly id: string;
+  readonly noReply: boolean;
+  readonly path: string[];
+  readonly protocol: "transporter";
+  readonly type: Type.Call;
+  readonly version: Version;
+};
+```
+
+A `Call` message is sent to the server to call a remote function.
+
+#### Error
+
+<sup>_Type_</sup>
+
+```ts
+type Error<Error> = {
+  readonly address: string;
+  readonly error: Error;
+  readonly id: string;
+  readonly protocol: "transporter";
+  readonly type: Type.Error;
+  readonly version: Version;
+};
+```
+
+An `Error` message is sent to the client when calling a remote function throws or rejects.
+
+#### GarbageCollect
+
+<sup>_Type_</sup>
+
+```ts
+type GarbageCollect = {
+  readonly address: string;
+  readonly id: string;
+  readonly protocol: "transporter";
+  readonly type: Type.GarbageCollect;
+  readonly version: Version;
+};
+```
+
+A `GarbageCollect` message is sent to the server when a proxy is disposed on the client.
+
+#### Message
+
+<sup>_Type_</sup>
+
+```ts
+type Message<Value> =
+  | CallFunction<Value[]>
+  | Error<Value>
+  | GarbageCollect
+  | SetValue<Value>;
+```
+
+A discriminated union of the different message types.
+
+#### SetValue
+
+<sup>_Type_</sup>
+
+```ts
+type SetValue<Value> = {
+  readonly address: string;
+  readonly id: string;
+  readonly protocol: "transporter";
+  readonly type: Type.Set;
+  readonly value: Value;
+  readonly version: Version;
+};
+```
+
+A `Set` message is sent to the client after calling a remote function.
+
+#### Type
+
+<sup>_Type_</sup>
+
+```ts
+enum Type {
+  Call = "Call",
+  Error = "Error",
+  GarbageCollect = "GarbageCollect",
+  Set = "Set"
+}
+```
+
+An enumerable of the different message types.
+
+#### Type
+
+<sup>_Type_</sup>
+
+```ts
+type Version = `${number}.${number}.${number}`;
+```
+
+A semantic version string.
+
+#### Protocol
+
+<sup>_Constant_</sup>
+
+```ts
+const protocol = "transporter";
+```
+
+The name of the protocol.
+
+#### Version
+
+<sup>_Constant_</sup>
+
+```ts
+const version: Version;
+```
+
+The version of the protocol.
+
+#### IsCompatible
+
+<sup>_Function_</sup>
+
+```ts
+function isCompatible(messageVersion: Version): boolean;
+```
+
+Returns true if a message is compatible with the current protocol version. A
+message is considered compatible if its major and minor versions are the same.
+
+##### Example
+
+```ts
+import * as Message from "@daniel-nagy/transporter/Message";
+
+Message.isCompatible(message);
+```
+
+#### IsMessage
+
+<sup>_Function_</sup>
+
+```ts
+function isMessage<T, Value>(
+  message: T | Message<Value>
+): message is Message<Value>;
+```
+
+Returns true if the value is a Transporter message.
+
+##### Example
+
+```ts
+import * as Message from "@daniel-nagy/transporter/Message";
+
+Message.isMessage(value);
+```
+
+#### ParseVersion
+
+<sup>_Function_</sup>
+
+```ts
+function parseVersion(
+  version: Version
+): [major: string, minor: string, patch: string];
+```
+
+Parses a semantic version string and returns a tuple of the version segments.
+
+##### Example
+
+```ts
+import * as Message from "@daniel-nagy/transporter/Message";
+
+Message.parseVersion(message.version);
+```
 
 ### Session
 

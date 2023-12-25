@@ -24,10 +24,10 @@ describe("recursive protocols", () => {
     const { input, output } = session;
 
     input;
-    // ^? const input: Required<Observer<Message.t<Json.Json>>>
+    // ^? const input: Required<Observer<Message<Json.Json>>>
 
     output;
-    // ^? const output: Observable<Message.t<Json.Json>>
+    // ^? const output: Observable<Message<Json.Json>>
   });
 
   test("A type error is produced if Resource is not called.", () => {

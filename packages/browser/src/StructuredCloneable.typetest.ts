@@ -26,9 +26,9 @@ test("session types", () => {
   const { input, output } = session;
 
   input;
-  // ^? const input: Required<Observer<Message.t<StructuredCloneable.StructuredCloneable>>>
+  // ^? const input: Required<Observer<Message<StructuredCloneable.StructuredCloneable>>>
   output;
-  // ^? const output: Observable<Message.t<StructuredCloneable.StructuredCloneable>>
+  // ^? const output: Observable<Message<StructuredCloneable.StructuredCloneable>>
 
   const _proxy = session.createProxy();
   //    ^? const _proxy: () => Promise<void>

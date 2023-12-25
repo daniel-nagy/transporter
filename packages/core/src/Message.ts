@@ -1,12 +1,9 @@
 import * as JsObject from "./JsObject.js";
 
-import t = Message.t;
-export type { t };
-
 /**
- * Flattens an intersection type into a single type. Taken from type-fest.
+ * Flattens an intersection type into a single type.
  */
-type Simplify<T> = { [K in keyof T]: T[K] };
+type FlattenIntersection<T> = T extends object ? { [K in keyof T]: T[K] } : T;
 
 /**
  * The name of the Transporter protocol is the constant "transporter".
@@ -46,20 +43,20 @@ export enum Type {
  */
 export type Version = `${number}.${number}.${number}`;
 
-namespace Message {
-  /**
-   * A discriminated union of the different types of messages.
-   *
-   * While the creation and interpretation of these messages should be
-   * considered internal, it is ok to intercept these messages and perform your
-   * own encoding on them. By doing so you can create your own protocol stack.
-   */
-  export type t<Value = unknown> =
-    | CallFunction<Value[]>
-    | Error<Value>
-    | GarbageCollect
-    | SetValue<Value>;
-}
+/**
+ * A discriminated union of the different types of messages.
+ *
+ * While the creation and interpretation of these messages should be
+ * considered internal, it is ok to intercept these messages and perform your
+ * own encoding on them. By doing so you can create your own protocol stack.
+ */
+export type Message<Value = unknown> =
+  | CallFunction<Value[]>
+  | Error<Value>
+  | GarbageCollect
+  | SetValue<Value>;
+
+export type { Message as t };
 
 /**
  * All messages sent by Transporter have this shape.
@@ -69,7 +66,7 @@ namespace Message {
  * to be passed to an encoder of a subprotocol type, with an index signature,
  * without type errors.
  */
-export type Message = {
+type MessageBase = {
   readonly address: string;
   readonly id: string;
   readonly protocol: typeof protocol;
@@ -77,8 +74,8 @@ export type Message = {
   readonly version: Version;
 };
 
-export type CallFunction<Args> = Simplify<
-  Message & {
+export type CallFunction<Args> = FlattenIntersection<
+  MessageBase & {
     readonly args: Args;
     readonly path: string[];
     readonly noReply: boolean;
@@ -112,8 +109,8 @@ export const CallFunction = <Args>({
   version
 });
 
-export type Error<Error> = Simplify<
-  Message & {
+export type Error<Error> = FlattenIntersection<
+  MessageBase & {
     readonly error: Error;
     readonly type: Type.Error;
   }
@@ -139,8 +136,8 @@ export const Error = <T>({
   version
 });
 
-export type GarbageCollect = Simplify<
-  Message & {
+export type GarbageCollect = FlattenIntersection<
+  MessageBase & {
     readonly type: Type.GarbageCollect;
   }
 >;
@@ -162,8 +159,8 @@ export const GarbageCollect = ({
   version
 });
 
-export type SetValue<Value> = Simplify<
-  Message & {
+export type SetValue<Value> = FlattenIntersection<
+  MessageBase & {
     readonly type: Type.Set;
     readonly value: Value;
   }
@@ -194,8 +191,8 @@ export const SetValue = <T>({
  * Returns `true` if the message is a Transporter message.
  */
 export function isMessage<T, Value>(
-  message: T | Message.t<Value>
-): message is Message.t<Value> {
+  message: T | Message<Value>
+): message is Message<Value> {
   return (
     JsObject.isObject(message) &&
     JsObject.has(message, "protocol") &&
