@@ -791,11 +791,11 @@ Specifies what to do in the event of a buffer overflow.
 ```ts
 type BufferOptions = {
   /**
-   * The max capacity of the buffer.
+   * The max capacity of the buffer. The default is `Infinity`.
    */
   limit?: number;
   /**
-   * How to handle a buffer overflow scenario.
+   * How to handle a buffer overflow scenario. The default is `Error`.
    */
   overflowStrategy?: BufferOverflowStrategy;
 };
@@ -1063,11 +1063,8 @@ Observable.of(1, 2, 3).subscribe(console.log);
 ```ts
 function bufferUntil<T, S>(
   signal: ObservableLike<S>,
-  {
-    limit = Infinity,
-    overflowStrategy = BufferOverflowStrategy.Error
-  }: BufferOptions = {}
-): Observable<T>;
+  options?: BufferOptions
+): (observable: ObservableLike<T>) => Observable<T>;
 ```
 
 Buffers emitted values until a signal emits or completes. Once the signal emits or completes the buffered values will be emitted synchronously.
@@ -1090,7 +1087,7 @@ setTimeout(() => signal.next(), 2000);
 ```ts
 function catchError<T>(
   callback: <E>(error: E) => ObservableLike<T>
-): Observable<T>;
+): (observable: ObservableLike<T>) => Observable<T>;
 ```
 
 Catches an error emitted by an upstream observable. The callback function can return a new observable to recover from the error. The new observable will completely replace the old one.
@@ -1115,7 +1112,7 @@ Observable.of(1, 2, 3)
 ```ts
 function filter<T, S extends T>(
   callback: ((value: T) => value is S) | ((value: T) => boolean)
-): Observable<S>;
+): (observable: ObservableLike<T>) => Observable<S>;
 ```
 
 Selectively keeps values for which the callback returns `true`. All other values are discarded.
@@ -1149,7 +1146,7 @@ If the observable never emits the promise will never resolve.
 ```ts
 import * as Observable from "@daniel-nagy/transporter/Observable";
 
-await Observable.of(1, 2, 3).pipe(Observable.firstValueFrom());
+await Observable.firstValueFrom(Observable.of(1, 2, 3));
 ```
 
 #### FlatMap
@@ -1159,7 +1156,7 @@ await Observable.of(1, 2, 3).pipe(Observable.firstValueFrom());
 ```ts
 function flatMap<T, U>(
   callback: (value: T) => ObservableLike<U> | PromiseLike<U>
-): Observable<U>;
+): (observable: ObservableLike<T>) => Observable<U>;
 ```
 
 Calls the callback function for each value emitted by the observable. The callback function returns a new observable that is flattened to avoid creating an observable of observables.
@@ -1171,9 +1168,160 @@ The observable completes when the source observable and all inner observables co
 ```ts
 import * as Observable from "@daniel-nagy/transporter/Observable";
 
-await Observable.of(1, 2, 3).pipe(
+Observable.of(1, 2, 3).pipe(
   Observable.flatMap((num) => Observable.of(num * 2))
 );
+```
+
+#### Map
+
+<sup>_Function_</sup>
+
+```ts
+function map<T, U>(
+  callback: (value: T) => U
+): (observable: ObservableLike<T>) => Observable<U>;
+```
+
+Calls the callback function for each value emitted by the observable and emits the value returned by the callback function.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3).pipe(Observable.map((num) => num * 2));
+```
+
+#### Merge
+
+<sup>_Function_</sup>
+
+```ts
+function merge<T>(...observables: ObservableLike<T>[]): Observable<T>;
+```
+
+Merges 2 or more observables into a single observable. The resulting observable does not complete until all merged observables complete.
+
+Values will be emitted synchronously from each observable in the order provided. Any asynchronous values will be emitted in the order they arrive.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.merge(Observable.of(1, 2, 3), Observable.of(4, 5, 6)).subscribe(
+  console.log
+);
+```
+
+#### Take
+
+<sup>_Function_</sup>
+
+```ts
+function take(
+  amount: number
+): <T>(observable: ObservableLike<T>) => Observable<T>;
+```
+
+Takes the first `n` values from an observable and then completes.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3).pipe(Observable.take(2)).subscribe(console.log);
+```
+
+#### TakeUntil
+
+<sup>_Function_</sup>
+
+```ts
+function takeUntil(
+  signal: ObservableLike<unknown>
+): <T>(observable: ObservableLike<T>) => Observable<T>;
+```
+
+Takes values from an observable until a signal emits or completes.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Subject from "@daniel-nagy/transporter/Subject";
+
+const signal = Subject.init();
+Observable.cron(1000, () => Math.random()).pipe(Observable.takeUntil(signal));
+setTimeout(() => signal.next(), 2000);
+```
+
+#### Tap
+
+<sup>_Function_</sup>
+
+```ts
+function tap<T>(
+  callback: (value: T) => unknown
+): <T>(observable: ObservableLike<T>) => Observable<T>;
+```
+
+Allows performing effects when a value is emitted without altering the value that is emitted.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3).pipe(Observable.tap(console.log)).subscribe();
+```
+
+#### Timeout
+
+<sup>_Function_</sup>
+
+```ts
+function timeout<T>(
+  milliseconds: number,
+  callback?: (error: TimeoutError) => ObservableLike<T>
+): <T>(observable: ObservableLike<T>) => Observable<T>;
+```
+
+Causes an observable to error if a value is not emitted within the specified timeout limit. The timer resets every time a value is emitted.
+
+The callback function may return a new observable to replace the old one or to return a specific error.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.cron(1000, () => Math.random())
+  .pipe(Observable.timeout(999))
+  .subscribe();
+```
+
+#### ToObserver
+
+<sup>_Function_</sup>
+
+```ts
+function toObserver<T>(
+  observerOrNext?: Observer<T> | ((value: T) => void)
+): Observer<T>;
+```
+
+Takes a value that may be an observer or a function and returns an observer. If called without an argument it will return an empty object.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+const identity = (value) => value;
+const observer = toObserver(identity);
 ```
 
 ### Message

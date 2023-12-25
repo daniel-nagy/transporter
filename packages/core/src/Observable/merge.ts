@@ -7,9 +7,7 @@ import { type ObservableLike, Observable } from "./Observable.js";
  * Values will be emitted synchronously from each observable in the order
  * provided. Any asynchronous values will be emitted in the order they arrive.
  */
-export function merge<T>(
-  ...observables: ObservableLike<T>[]
-): ObservableLike<T> {
+export function merge<T>(...observables: ObservableLike<T>[]): Observable<T> {
   return new Observable((observer) => {
     if (observables.length === 0) return observer.complete?.();
 
