@@ -1603,7 +1603,7 @@ The Session module is used to create client and server sessions.
 - [Agent](#Agent)
 - [ClientOptions](#ClientOptions)
 - [ClientSession](#ClientSession)
-- [Resource] (#Resource)
+- [Resource](#Resource)
 - [ServerOptions](#ServerOptions)
 - [ServerSession](#ServerSession)
 - [Session](#Session)
@@ -1614,8 +1614,8 @@ The Session module is used to create client and server sessions.
 
 ###### Constructors
 
+- [Resource](#Resource)
 - [client](#Client)
-- [Resource] (#Resource)
 - [server](#Server)
 
 ###### Methods
@@ -1709,6 +1709,35 @@ abstract class Session<Protocol, Value> extends Supervisor.t<Agent> {
 A `Session` spawns and observes agents. A session may spawn multiple server or client agents while active. Terminating a session will terminate all agents spawned by the session that are still active.
 
 If all agents spawned by the session are terminated then the session is automatically terminated.
+
+#### RootSupervisor
+
+<sup>_Constant_</sup>
+
+```ts
+const rootSupervisor = Supervisor.init<Session>("RootSupervisor");
+```
+
+The root supervisor observers all active sessions.
+
+#### Resource
+
+<sup>_Constructor_</sup>
+
+```ts
+const Resource = <Value>(): Resource<Value>;
+```
+
+Creates a new `Resource`. This container type is necessary because TypeScript
+lacks partial inference of type parameters.
+
+```ts
+import * as Session from "@daniel-nagy/transporter/Session";
+
+import type { Api } from "...";
+
+const resource = Session.Resource<Api>();
+```
 
 #### Client
 
