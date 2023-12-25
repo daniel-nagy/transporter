@@ -1061,13 +1061,13 @@ Observable.of(1, 2, 3).subscribe(console.log);
 <sup>_Function_</sup>
 
 ```ts
-bufferUntil<T, S>(
+function bufferUntil<T, S>(
   signal: ObservableLike<S>,
   {
     limit = Infinity,
     overflowStrategy = BufferOverflowStrategy.Error
   }: BufferOptions = {}
-): Observable<T>
+): Observable<T>;
 ```
 
 Buffers emitted values until a signal emits or completes. Once the signal emits or completes the buffered values will be emitted synchronously.
@@ -1106,6 +1106,74 @@ Observable.of(1, 2, 3)
     Observable.catchError(() => Observable.of(4, 5, 6))
   )
   .subscribe(console.log);
+```
+
+#### Filter
+
+<sup>_Function_</sup>
+
+```ts
+function filter<T, S extends T>(
+  callback: ((value: T) => value is S) | ((value: T) => boolean)
+): Observable<S>;
+```
+
+Selectively keeps values for which the callback returns `true`. All other values are discarded.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+Observable.of(1, 2, 3)
+  .pipe(Observable.filter((num) => num % 2 === 0))
+  .subscribe(console.log);
+```
+
+#### FirstValueFrom
+
+<sup>_Function_</sup>
+
+```ts
+function firstValueFrom<T>(observable: ObservableLike<T>): Promise<T>;
+```
+
+Transforms an observable into a promise that resolves with the first emitted value from the observable. If the observable errors the promise is rejected. If the observable completes without ever emitting a value the promise is rejected with an `EmptyError`.
+
+**WARNING**
+
+If the observable never emits the promise will never resolve.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+await Observable.of(1, 2, 3).pipe(Observable.firstValueFrom());
+```
+
+#### FlatMap
+
+<sup>_Function_</sup>
+
+```ts
+function flatMap<T, U>(
+  callback: (value: T) => ObservableLike<U> | PromiseLike<U>
+): Observable<U>;
+```
+
+Calls the callback function for each value emitted by the observable. The callback function returns a new observable that is flattened to avoid creating an observable of observables.
+
+The observable completes when the source observable and all inner observables complete.
+
+##### Example
+
+```ts
+import * as Observable from "@daniel-nagy/transporter/Observable";
+
+await Observable.of(1, 2, 3).pipe(
+  Observable.flatMap((num) => Observable.of(num * 2))
+);
 ```
 
 ### Message
