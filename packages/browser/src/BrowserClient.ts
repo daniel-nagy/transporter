@@ -22,9 +22,8 @@ export type Options = {
 
 export class BrowserClient {
   /**
-   * The address of the server. You can think of the address as being like a
-   * port number, except an address can be any string instead of a meaningless
-   * number.
+   * The address of the server. An address is like a port number, except an
+   * address can be any string instead of a meaningless number.
    */
   public readonly serverAddress: string;
 
@@ -36,8 +35,7 @@ export class BrowserClient {
   public readonly origin: string;
 
   /**
-   * The message target. You can think of the message target as being like the
-   * server host.
+   * The message target. A message target is like a server host.
    */
   public readonly target: Window | Worker | SharedWorker | ServiceWorker;
 

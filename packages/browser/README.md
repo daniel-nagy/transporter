@@ -27,6 +27,8 @@ The browser package contains the following modules.
 
 <sup>_Module_</sup>
 
+A `BroadcastSubject` can be used to synchronize state between same-origin browsing contexts or workers.
+
 ###### Types
 
 - [BroadcastSubject](#BroadcastSubject)
@@ -35,9 +37,41 @@ The browser package contains the following modules.
 
 - [fromChannel](#FromChannel)
 
+#### BroadcastSubject
+
+<sup>_Type_</sup>
+
+```ts
+class BroadcastSubject<T extends StructuredCloneable.t> extends Subject.t<T> {}
+```
+
+A `BroadcastSubject` is a `Subject` that broadcasts emitted values over a [`BroadcastChannel`](https://developer.mozilla.org/en-US/docs/Web/API/BroadcastChannel).
+
+#### FromChannel
+
+<sup>_Constructor_</sup>
+
+```ts
+function fromChannel<T extends StructuredCloneable.t>(
+  name: string
+): BroadcastSubject<T>;
+```
+
+Creates a `BroadcastSubject` from a broadcast channel name.
+
+##### Example
+
+```ts
+import * as BroadcastSubject from "@daniel-nagy/transporter-browser/BroadcastSubject";
+const darkMode = BroadcastSubject.fromChannel("darkMode");
+darkMode.subscribe(console.log);
+```
+
 ### BrowserClient
 
 <sup>_Module_</sup>
+
+An interface for making requests to a browsing context or worker.
 
 ###### Types
 
@@ -52,15 +86,97 @@ The browser package contains the following modules.
 
 - [fetch](Fetch)
 
+#### BrowserClient
+
+<sup>_Type_</sup>
+
+```ts
+class BrowserClient {
+  /**
+   * The address of the server. An address is like a port number, except an
+   * address can be any string instead of a meaningless number.
+   */
+  public readonly serverAddress: string;
+  /**
+   * If the window and the origin do not match the connection will fail. The
+   * origin is only relevant when connecting to a window since the browser
+   * will require worker URLs to be same-origin.
+   */
+  public readonly origin: string;
+  /**
+   * The message target. A message target is like a server host.
+   */
+  public readonly target: Window | Worker | SharedWorker | ServiceWorker;
+}
+```
+
+An object that may be used to make fetch requests to a browsing context or worker.
+
+#### Options
+
+<sup>_Type_</sup>
+
+```ts
+type Options = {
+  /**
+   * The address of the server. The default is the empty string.
+   */
+  address?: string;
+  /**
+   * When connecting to a `Window` you may specify the allowed origin. If the
+   * window and the origin do not match the connection will fail. The origin is
+   * passed directly to the `targetOrigin` parameter of `postMessage` when
+   * connecting to the window. The default is `"*"`, which allows any origin.
+   */
+  origin?: string;
+};
+```
+
+Options when creating a `BrowserClient`.
+
+#### From
+
+<sup>_Constructor_</sup>
+
+```ts
+function from(
+  target: Window | Worker | SharedWorker | ServiceWorker,
+  options?: Options
+): BrowserClient;
+```
+
+Creates a new `BrowserClient`.
+
+##### Example
+
+```ts
+const worker = new Worker("/worker.js", { type: "module" });
+const client = BrowserClient.from(worker);
+```
+
+#### Fetch
+
+<sup>_Method_</sup>
+
+```ts
+fetch(body: StructuredCloneable.t): Promise<StructuredCloneable.t>;
+```
+
+Makes a request to a `BrowserServer`.
+
+##### Example
+
+```ts
+const worker = new Worker("/worker.js", { type: "module" });
+const client = BrowserClient.from(worker);
+const response = await client.fetch("👋");
+```
+
 ### BrowserRequest
 
 <sup>_Module_</sup>
 
 ###### Types
-
-- [Request](#Request)
-
-###### Constructors
 
 - [Request](#Request)
 
@@ -73,10 +189,6 @@ The browser package contains the following modules.
 <sup>_Module_</sup>
 
 ###### Types
-
-- [Response](#Response)
-
-###### Constructors
 
 - [Response](#Response)
 
