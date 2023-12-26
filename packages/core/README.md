@@ -34,8 +34,8 @@ Transporter contains the following modules.
 - [Proxy](#Proxy)
 - [PubSub](#Pubsub)
 - [Session](#Session)
-- [Subprotocol](#Subprotocol)
 - [Subject](#Subject)
+- [Subprotocol](#Subprotocol)
 - [SuperJson](#Superjson)
 
 ### BehaviorSubject
@@ -299,8 +299,8 @@ The Injector module is used for dependency injection.
 
 ###### Constructors
 
-- [empty](#Empty)
 - [Tag](#Tag)
+- [empty](#Empty)
 
 ###### Methods
 
@@ -1930,7 +1930,192 @@ Subscribes to state changes and values emitted by the subject.
 
 <sup>_Module_</sup>
 
-The Subprotocol module is used to provide typesafety on top of the Transporter protocol.
+The Transporter protocol is type agnostic. In order to provide type-safety a subprotocol is required. The subprotocol restricts what types may be included in function IO. For example, if the subprotocol is JSON then only JSON data types may be input or output from remote functions.
+
+In addition, Transporter can perform recursive RPC if certain subprotocol and network conditions are met. Recursive RPC means functions or proxies may be included in function IO. This is an interesting concept because it allows state between processes to be held on the call stack. For example, recursive RPC allows Observables to be used for pub-sub.
+
+In order to use recursive RPC your subprotocol must be connection-oriented, bidirectional, and unicast. If those conditions are met then the call signature for remote functions will allow functions or proxies as input or output. It turns out that these types of connections are common in the browser.
+
+###### Types
+
+- [ConnectionMode](#ConnectionMode)
+- [OperationMode](#OperationMode)
+- [Protocol](#Protocol)
+- [Subprotocol](#Subprotocol)
+- [TransmissionMode](#TransmissionMode)
+
+###### Constructors
+
+- [Protocol](#Protocol)
+- [init](#Init)
+
+###### Functions
+
+- [isBidirectional](#IsBidirectional)
+
+#### ConnectionMode
+
+<sup>_Type_</sup>
+
+```ts
+enum ConnectionMode {
+  /**
+   * A message can be sent from one endpoint to another without prior
+   * arrangement. For example, HTTP is a connectionless protocol.
+   */
+  Connectionless = "Connectionless",
+  /**
+   * A session or connection is established before data can be transmitted. For
+   * example, TCP is a connection-oriented protocol.
+   */
+  ConnectionOriented = "ConnectionOriented"
+}
+```
+
+Used to define the type of connection between the client and the server.
+
+#### OperationMode
+
+<sup>_Type_</sup>
+
+```ts
+enum OperationMode {
+  /**
+   * A single message is sent to every node in a network. This is a one-to-all
+   * transmission.
+   */
+  Broadcast = "Broadcast",
+  /**
+   * A single message is sent to a subset of nodes in a network. This is a
+   * one-to-many transmission.
+   */
+  Multicast = "Multicast",
+  /**
+   * A single message is sent to a single node. This is a one-to-one
+   * transmission.
+   */
+  Unicast = "Unicast"
+}
+```
+
+Used to define how data is distributed to nodes in a network.
+
+#### Protocol
+
+<sup>_Type_</sup>
+
+```ts
+interface Protocol<T> {}
+```
+
+A container type for a subprotocol. This is necessary since TypeScript lacks partial inference of type parameters.
+
+#### Subprotocol
+
+<sup>_Type_</sup>
+
+```ts
+interface Subprotocol<Protocol, Input, Output> {}
+```
+
+Used to restrict function input and output types as well as determine if recursive RPC can be enabled or not.
+
+#### TransmissionMode
+
+<sup>_Type_</sup>
+
+```ts
+enum TransmissionMode {
+  /**
+   * Either side may transmit data at any time. This is a 2-way communication.
+   */
+  Duplex = "Duplex",
+  /**
+   * Only one side can transmit data at a time. This is a 2-way communication.
+   */
+  HalfDuplex = "HalfDuplex",
+  /**
+   * Only the sender can transmit data. This is a 1-way communication.
+   */
+  Simplex = "Simplex"
+}
+```
+
+Used to define how data is transmitted over a network.
+
+#### Protocol
+
+<sup>_Constructor_</sup>
+
+```ts
+function Protocol<const T>(): Protocol<T>;
+```
+
+Creates a new `Protocol`.
+
+##### Example
+
+```ts
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as Json from "@daniel-nagy/transporter/Json";
+
+const jsonProtocol = Subprotocol.Protocol<Json.t>();
+```
+
+#### Init
+
+<sup>_Constructor_</sup>
+
+```ts
+function init(options: {
+  connectionMode: ConnectionMode;
+  operationMode: OperationMode;
+  protocol: Protocol;
+  transmissionMode: TransmissionMode;
+}): Subprotocol;
+```
+
+Creates a new `Subprotocol`.
+
+##### Example
+
+```ts
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+const subprotocol = Subprotocol.init({
+  connectionMode: Session.ConnectionMode.ConnectionLess,
+  operationMode: Session.OperationMode.Unicast,
+  protocol: Subprotocol.Protocol<SuperJson.t>(),
+  transmissionMode: Session.TransmissionMode.HalfDuplex
+});
+```
+
+#### IsBidirectional
+
+<sup>_Function_</sup>
+
+```ts
+function isBidirectional(protocol: Subprotocol<unknown>): boolean;
+```
+
+Returns `true` is the subprotocol is bidirectional. The connection is considered bidirectional if its operation mode is unicast and its transmission mode is duplex or half-duplex.
+
+##### Example
+
+```ts
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+const subprotocol = Subprotocol.init({
+  connectionMode: Session.ConnectionMode.ConnectionLess,
+  operationMode: Session.OperationMode.Unicast,
+  protocol: Subprotocol.Protocol<SuperJson.t>(),
+  transmissionMode: Session.TransmissionMode.HalfDuplex
+});
+
+Subprotocol.isBidirectional(subprotocol); // true
+```
 
 ### SuperJson
 

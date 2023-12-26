@@ -5,13 +5,13 @@ import * as JsFunction from "./JsFunction.js";
  */
 export enum ConnectionMode {
   /**
-   * No dedicated connection is established. For example, HTTP is a
-   * connectionless protocol.
+   * A message can be sent from one endpoint to another without prior
+   * arrangement. For example, HTTP is a connectionless protocol.
    */
   Connectionless = "Connectionless",
   /**
-   * A dedicated connection is established. For example, TCP is a
-   * connection-oriented protocol.
+   * A session or connection is established before data can be transmitted. For
+   * example, TCP is a connection-oriented protocol.
    */
   ConnectionOriented = "ConnectionOriented"
 }
@@ -121,9 +121,9 @@ const Subprotocol = <
 export const init = Subprotocol;
 
 /**
- * Returns `true` if the protocol is bidirectional. A protocol is not
- * bidirectional if its operation mode is broadcast or multicast, or if its
- * transmission mode is simplex.
+ * Returns `true` if the subprotocol is bidirectional. The subprotocol is
+ * considered bidirectional if its operation mode is unicast and its
+ * transmission mode is duplex or half-duplex.
  */
 export function isBidirectional(protocol: Subprotocol<unknown>): boolean {
   switch (true) {
