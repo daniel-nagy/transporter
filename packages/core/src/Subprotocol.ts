@@ -86,11 +86,10 @@ export type { Subprotocol as t };
  * RPC allows Observables to be used for pub-sub.
  *
  * In order to use recursive RPC your subprotocol must be connection-oriented,
- * bidirectional, and unicast. If those conditions are met then the call
- * signature for remote functions will allow functions or proxies as input or
- * output. It turns out that these types of connections are common in the
- * browser, making the application of Transporter in the browser especially
- * interesting.
+ * and bidirectional. If those conditions are met then the call signature for
+ * remote functions will allow functions or proxies as input or output. It turns
+ * out that these types of connections are common in the browser, making the
+ * application of Transporter in the browser especially interesting.
  */
 const Subprotocol = <
   const SubProtocol,

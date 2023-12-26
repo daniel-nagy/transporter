@@ -42,6 +42,8 @@ Transporter contains the following modules.
 
 <sup>_Module_</sup>
 
+A `BehaviorSubject` is a `Subject` that replays the most recent value when subscribed to.
+
 ###### Types
 
 - [BehaviorSubject](#BehaviorSubject)
@@ -62,7 +64,7 @@ Transporter contains the following modules.
 class BehaviorSubject<T> extends Subject<T> {}
 ```
 
-A `BehaviorSubject` is a Subject that replays the most recent value when subscribed to.
+A `Subject` that replays the last emitted value.
 
 #### Of
 
@@ -104,6 +106,10 @@ BehaviorSubject.of("👍").getValue();
 
 <sup>_Module_</sup>
 
+A `Cache` may be used to memoize remote function calls. Transporter guarantees that proxies are referentially stable so other memoization APIs are likely compatible with Transporter as well.
+
+In order to memoize a function its arguments must be serializable. A stable algorithm is used to serialize a function's arguments and index the cache. The cache supports any arguments of type `SuperJson`.
+
 ###### Types
 
 - [Cache](#Cache)
@@ -129,9 +135,7 @@ BehaviorSubject.of("👍").getValue();
 class Cache {}
 ```
 
-A `Cache` may be used to memoize remote function calls. Transporter guarantees that proxies are referentially stable so other memoization APIs are likely compatible with Transporter as well.
-
-In order to memoize a function its arguments must be serializable. A stable algorithm is used to serialize a function's arguments and index the cache. The Cache supports any arguments of type `SuperJson`.
+A `Cache` is used to memoize remote function calls. A `Cache` is double-keyed by a function and its arguments.
 
 #### Init
 
@@ -290,7 +294,7 @@ cache.update(identity, "🥸", () => "🤓");
 
 <sup>_Module_</sup>
 
-The Injector module is used for dependency injection.
+An `Injector` is IoC container and can be used to inject dependencies into functions invoked by Transporter.
 
 ###### Types
 
@@ -475,7 +479,7 @@ const getUser = Injector.provide(
 
 <sup>_Module_</sup>
 
-The Json module may be used as a subprotocol. If you are communicating between two JavaScript runtimes then you may use the [SuperJson](#Superjson) module for a better experience.
+A `Json` type may be used as a subprotocol. If both ends of your communication channel are JavaScript runtimes then you may use the [SuperJson](#Superjson) module instead for a much larger set of types.
 
 ###### Types
 
@@ -549,7 +553,7 @@ Json.sortDeep({
 
 <sup>_Module_</sup>
 
-The Message module implements the Transporter message protocol. The creation and interpretation of messages should be considered internal. However, it is ok to intercept message and perform your own logic or encoding.
+Defines the Transporter message protocol. The creation and interpretation of messages should be considered internal. However, it is ok to intercept message and perform your own logic or encoding.
 
 ###### Types
 
@@ -1934,7 +1938,7 @@ The Transporter protocol is type agnostic. In order to provide type-safety a sub
 
 In addition, Transporter can perform recursive RPC if certain subprotocol and network conditions are met. Recursive RPC means functions or proxies may be included in function IO. This is an interesting concept because it allows state between processes to be held on the call stack. For example, recursive RPC allows Observables to be used for pub-sub.
 
-In order to use recursive RPC your subprotocol must be connection-oriented, bidirectional, and unicast. If those conditions are met then the call signature for remote functions will allow functions or proxies as input or output. It turns out that these types of connections are common in the browser.
+In order to use recursive RPC your subprotocol must be connection-oriented and bidirectional. If those conditions are met then the call signature for remote functions will allow functions or proxies as input or output. It turns out that these types of connections are common in the browser.
 
 ###### Types
 
@@ -2122,3 +2126,71 @@ Subprotocol.isBidirectional(subprotocol); // true
 <sup>_Module_</sup>
 
 The SuperJson module extends the JSON protocol to include many built-in JavaScript types, including `Date`, `RegExp`, `Map`, ect.
+
+###### Types
+
+- [SuperJson](#SuperJson)
+
+###### Functions
+
+- [fromJson](#FromJson)
+- [toJson](#ToJson)
+
+#### SuperJson
+
+<sup>_Type_</sup>
+
+```ts
+type SuperJson =
+  | void
+  | null
+  | undefined
+  | boolean
+  | number
+  | bigint
+  | string
+  | Date
+  | RegExp
+  | Array<SuperJson>
+  | Map<SuperJson, SuperJson>
+  | Set<SuperJson>
+  | { [key: string]: SuperJson };
+```
+
+An extended JSON type that includes many builtin JavaScript types.
+
+#### FromJson
+
+<sup>_Function_</sup>
+
+```ts
+function fromJson(value: Json.t): SuperJson;
+```
+
+Revives an encoded `SuperJson` value from a JSON value.
+
+##### Example
+
+```ts
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+SuperJson.fromJson(value);
+```
+
+#### ToJson
+
+<sup>_Function_</sup>
+
+```ts
+function toJson(value: SuperJson): Json.t;
+```
+
+Encodes a `SuperJson` value as a valid JSON value.
+
+##### Example
+
+```ts
+import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
+
+SuperJson.toJson(new Date());
+```
