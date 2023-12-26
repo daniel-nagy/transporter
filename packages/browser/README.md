@@ -6,7 +6,7 @@ The browser package contains APIs designed to work in the browser.
 npm add @daniel-nagy/transporter @daniel-nagy/transporter-browser
 ```
 
-Transporter is distributed as ES modules. Transport may also be imported directly in the browser from a URL.
+Transporter is distributed as ES modules. Transporter may also be imported directly in the browser from a URL.
 
 ## API
 
@@ -769,9 +769,51 @@ enum Type {
 
 An enumerable of the different types of socket messages.
 
+#### IsMessage
+
+<sup>_Function_</sup>
+
+```ts
+function isMessage(message: StructuredCloneable.t): message is Message;
+```
+
+Returns `true` if the message is a socket message.
+
+#### IsType
+
+<sup>_Function_</sup>
+
+```ts
+function isType<T extends Type>(
+  message: StructuredCloneable.t,
+  type: T
+): message is {
+  [Type.Connect]: Connect;
+  [Type.Connected]: Connected;
+  [Type.Disconnect]: Disconnect;
+  [Type.Disconnected]: Disconnected;
+  [Type.Ping]: Ping;
+  [Type.Pong]: Pong;
+}[T];
+```
+
+Returns `true` if the message is of the specified type.
+
+#### TypeOf
+
+<sup>_Function_</sup>
+
+```ts
+function typeOf(message: StructuredCloneable.t): Type | null;
+```
+
+Returns the message `Type` if the message is a socket message. Returns `null` otherwise.
+
 ### BrowserSocket.State
 
 <sup>_Module_</sup>
+
+A socket's state.
 
 ###### Types
 
@@ -782,9 +824,75 @@ An enumerable of the different types of socket messages.
 - [State](#State)
 - [Type](#Type)
 
+#### Closed
+
+<sup>_Type_</sup>
+
+```ts
+type Closed<E> = {
+  error?: E;
+  type: Type.Closed;
+};
+```
+
+The socket is closed, possibly with an error.
+
+#### Closing
+
+<sup>_Type_</sup>
+
+```ts
+type Closing<E> = {
+  error?: E;
+  type: Type.Closing;
+};
+```
+
+The socket is closing, possibly with an error.
+
+#### Connected
+
+<sup>_Type_</sup>
+
+```ts
+type Connected = {
+  type: Type.Connected;
+};
+```
+
+The socket is connected.
+
+#### Connecting
+
+<sup>_Type_</sup>
+
+```ts
+type Connecting = {
+  type: Type.Connecting;
+};
+```
+
+The socket is connecting.
+
+#### State
+
+<sup>_Type_</sup>
+
+```ts
+type State =
+  | Connecting
+  | Connected
+  | Closing<Error.ConnectionError>
+  | Closed<Error.DisconnectTimeoutError>;
+```
+
+A variant type for the different socket states.
+
 ### BrowserSocketServer
 
 <sup>_Module_</sup>
+
+A `BrowserSocketServer` listens for socket connect requests. When a request is received it will create a corresponding socket server side and complete the handshake.
 
 ###### Types
 
@@ -801,11 +909,164 @@ An enumerable of the different types of socket messages.
 
 - [stop](#Stop)
 
+#### BrowserSocketServer
+
+<sup>_Type_</sup>
+
+```ts
+class BrowserSocketServer {
+  public readonly address: string;
+  public readonly connect: Observable.t<BrowserSocket.t>;
+  public readonly state: State;
+  public readonly stateChange: Observable.t<State>;
+  public readonly stopped: Observable.t<State.Stopped>;
+}
+```
+
+Creates socket connections as requests come in.
+
+#### Options
+
+<sup>_Type_</sup>
+
+```ts
+type Options = {
+  /**
+   * The address of the server. The default is an empty string.
+   */
+  address?: string;
+  /**
+   * Allows intercepting connection requests and denying the request if
+   * necessary.
+   */
+  connectFilter?(message: MessageEvent<Message.Connect>): boolean;
+  /**
+   * Forwarded to the socket that is created on connection.
+   */
+  socketOptions?: SocketOptions;
+};
+```
+
+Options when creating a `BrowserSocketServer`.
+
+#### SocketOptions
+
+<sup>_Type_</sup>
+
+```ts
+type SocketOptions = {
+  disconnectTimeout?: number;
+  heartbeatInterval?: number;
+  heartbeatTimeout?: number;
+};
+```
+
+Options forwarded to the `BrowserSocket` when it is created.
+
+#### State
+
+<sup>_Type_</sup>
+
+```ts
+enum State {
+  Listening = "Listening",
+  Stopped = "Stopped"
+}
+```
+
+An enumerable of the different server states.
+
+#### Listen
+
+<sup>_Constructor_</sup>
+
+```ts
+function listen(options?: Options): BrowserSocketServer;
+```
+
+Creates a new `BrowserSocketServer`. Throws a `UniqueAddressError` if the address is already taken.
+
+#### Example
+
+```ts
+import * as BrowserSocketServer from "@daniel-nagy/transporter/BrowserSocketServer";
+
+const server = BrowserSocketServer.listen();
+server.connect.subscribe((socket) => socket.send("👋"));
+```
+
+#### Stop
+
+<sup>_Method_</sup>
+
+```ts
+function stop(): void;
+```
+
+Stops the server. A disconnect message will be sent to all connected clients.
+
+#### Example
+
+```ts
+import * as BrowserSocketServer from "@daniel-nagy/transporter/BrowserSocketServer";
+
+const server = BrowserSocketServer.listen();
+server.stop();
+```
+
 ### StructuredCloneable
 
 <sup>_Module_</sup>
+
+A `StructuredCloneable` type can be passed between processes in the browser.
 
 ###### Types
 
 - [StructuredCloneable](#StructuredCloneable)
 - [TypedArray](#TypedArray)
+
+#### StructuredCloneable
+
+<sup>_Type_</sup>
+
+```ts
+type StructuredCloneable =
+  | void
+  | null
+  | undefined
+  | boolean
+  | number
+  | bigint
+  | string
+  | Date
+  | ArrayBuffer
+  | RegExp
+  | TypedArray
+  | Array<StructuredCloneable>
+  | Map<StructuredCloneable, StructuredCloneable>
+  | Set<StructuredCloneable>
+  | { [key: string]: StructuredCloneable };
+```
+
+A value that can be cloned using the [structured clone algorithm](https://developer.mozilla.org/en-US/docs/Web/API/structuredClone).
+
+#### TypedArray
+
+<sup>_Type_</sup>
+
+```ts
+type TypedArray =
+  | BigInt64Array
+  | BigUint64Array
+  | Float32Array
+  | Float64Array
+  | Int8Array
+  | Int16Array
+  | Int32Array
+  | Uint8Array
+  | Uint8ClampedArray
+  | Uint16Array
+  | Uint32Array;
+```
+
+A `TypedArray` object describes an array-like view of an underlying binary data buffer.

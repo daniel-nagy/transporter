@@ -41,7 +41,7 @@ export type Options = {
   connectFilter?(message: MessageEvent<Message.Connect>): boolean;
   /**
    * Forwarded to the socket that is created on connection.
-   * See {@link BrowserSocket.SocketOptions}.
+   * See {@link BrowserSocket.Options}.
    */
   socketOptions?: SocketOptions;
 };
