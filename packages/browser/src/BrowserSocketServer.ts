@@ -153,6 +153,8 @@ export class BrowserSocketServer {
 /**
  * Creates a new `SocketServer` in the current browsing context or worker context.
  *
+ * @throws {UniqueAddressError} If the address is already taken.
+ *
  * @example
  *
  * const socketServer = BrowserSocketServer.listen();

@@ -358,7 +358,8 @@ An enumerable of the different server states.
 function listen(options: Options): BrowserServer;
 ```
 
-Creates a new `BrowserServer` in the global scope.
+Creates a new `BrowserServer` in the global scope. A `UniqueAddressError` will
+be thrown if the address is already taken.
 
 #### Example
 
@@ -399,6 +400,8 @@ server.stop();
 
 <sup>_Module_</sup>
 
+Provides a socket API on top of `postMessage` that is similar to the WebSocket API. A `BrowserSocket` is connection-oriented, duplex, and unicast. Any data that is structured cloneable can be passed through a browser socket.
+
 ###### Types
 
 - [BrowserSocket](#BrowserSocket)
@@ -418,6 +421,222 @@ server.stop();
 - [close](#Close)
 - [ping](#Ping)
 - [send](#Send)
+
+#### BrowserSocket
+
+<sup>_Type_</sup>
+
+```ts
+class BrowserSocket {
+  /**
+   * Emits when the socket's state changes to `Closed` and then completes.
+   */
+  public readonly closed: Observable.t<State.Closed>;
+  /**
+   * Emits when the socket's state changes to `Closing` and then completes.
+   */
+  public readonly closing: Observable.t<State.Closing>;
+  /**
+   * Emits if the socket's state changes to `Connected` and then completes. If
+   * the socket errors during connection it will complete without emitting.
+   */
+  public readonly connected: Observable.t<State.Connected>;
+  /**
+   * Emits when the socket receives data.
+   */
+  public readonly receive: Observable.t<StructuredCloneable.t>;
+  /**
+   * The current state of the socket.
+   */
+  public readonly state: State;
+  /**
+   * Emits when the socket's state changes. Completes when the socket state
+   * becomes `Closed`.
+   */
+  public readonly stateChange: Observable.t<State>;
+}
+```
+
+A `BrowserSocket` is used to create a connection between browsing contexts or a browsing context and a worker context.
+
+#### ConnectionError
+
+<sup>_Type_</sup>
+
+```ts
+type ConnectionError =
+  | Observable.BufferOverflowError
+  | ConnectTimeoutError
+  | HeartbeatTimeoutError;
+```
+
+A variant type for the different reasons a socket may transition to a closing state with an error.
+
+#### ConnectTimeoutError
+
+<sup>_Type_</sup>
+
+```ts
+class ConnectTimeoutError extends Error {}
+```
+
+Used to indicate that the connection failed because the server did not complete the connection in the allotted time.
+
+#### DisconnectTimeoutError
+
+<sup>_Type_</sup>
+
+```ts
+class DisconnectTimeoutError extends Error {}
+```
+
+Used to indicate that an acknowledgement was not received when closing the connection in the allotted time.
+
+#### HeartbeatTimeoutError
+
+<sup>_Type_</sup>
+
+```ts
+class HeartbeatTimeoutError extends Error {}
+```
+
+Used to indicate that a response to a health-check was not received in the allotted time.
+
+#### Options
+
+<sup>_Type_</sup>
+
+```ts
+interface Options {
+  /**
+   * The maximum number of messages to buffer before the socket is connected.
+   * The default is `Infinity`.
+   */
+  bufferLimit?: number;
+  /**
+   * What to do incase there is a buffer overflow. The default is to error.
+   */
+  bufferOverflowStrategy?: Observable.BufferOverflowStrategy;
+  /**
+   * The maximum amount of time to wait for a connection in milliseconds. The
+   * default is `2000` or 2 seconds.
+   */
+  connectTimeout?: number;
+  /**
+   * The maximum amount of time to wait for a disconnection in milliseconds. The
+   * default is `2000` or 2 seconds.
+   */
+  disconnectTimeout?: number;
+  /**
+   * The frequency at which to request heartbeats in milliseconds. The default
+   * is `1000` or 1 second.
+   */
+  heartbeatInterval?: number;
+  /**
+   * The maximum amount of time to wait for a heartbeat in milliseconds. The
+   * default is `2000` or 2 seconds.
+   */
+  heartbeatTimeout?: number;
+  /**
+   * The address of the socket server.
+   */
+  serverAddress?: string;
+}
+```
+
+Options when creating a `BrowserSocket`.
+
+#### WindowOptions
+
+<sup>_Type_</sup>
+
+```ts
+interface WindowOptions extends Options {
+  /**
+   * When connecting to a `Window` you may specify the allowed origin. If the
+   * window and the origin do not match the connection will fail. The origin is
+   * passed directly to the `targetOrigin` parameter of `postMessage` when
+   * connecting to the window. The default is `"*"`, which allows any origin.
+   */
+  origin?: string;
+}
+```
+
+Additional options when connecting to a browsing context.
+
+#### Connect
+
+<sup>_Constructor_</sup>
+
+```ts
+function connect(
+  target: SharedWorker | Window | Worker,
+  options?: Options | WindowOptions
+): BrowserSocket;
+```
+
+Creates a new `BrowserSocket`. The socket will start in a `Connecting` state.
+
+##### Example
+
+```ts
+import * as BrowserSocket from "@daniel-nagy/transporter/BrowserSocket";
+using socket = BrowserSocket.connect(self.parent);
+```
+
+#### Close
+
+<sup>_Method_</sup>
+
+```ts
+close(): void;
+```
+
+Closes the socket causing its state to transition to closing.
+
+##### Example
+
+```ts
+import * as BrowserSocket from "@daniel-nagy/transporter/BrowserSocket";
+const socket = BrowserSocket.connect(self.parent);
+socket.close();
+```
+
+#### Ping
+
+<sup>_Method_</sup>
+
+```ts
+ping(timeout: number = 2000): Promise<void>;
+```
+
+Sends a ping to a connected socket and waits for a pong to be sent back. Returns a promise that resolves when a pong is received or rejects if a pong is not received in the allotted time.
+
+##### Example
+
+```ts
+import * as BrowserSocket from "@daniel-nagy/transporter/BrowserSocket";
+using socket = BrowserSocket.connect(self.parent);
+await socket.ping();
+```
+
+#### Send
+
+<sup>_Method_</sup>
+
+```ts
+send(message: StructuredCloneable.t): void;
+```
+
+Sends data through the socket. Data will automatically be buffered until the socket connects.
+
+##### Example
+
+```ts
+import * as BrowserSocket from "@daniel-nagy/transporter/BrowserSocket";
+const socket = BrowserSocket.connect(self.parent);
+socket.send("👋");
+```
 
 ### BrowserSocket.Message
 

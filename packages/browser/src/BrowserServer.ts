@@ -140,6 +140,8 @@ export class BrowserServer {
 /**
  * Creates a new `BrowserServer`.
  *
+ * @throws {UniqueAddressError} If the address is already taken.
+ *
  * @example
  *
  * const server = BrowserServer.listen({
