@@ -592,7 +592,7 @@ using socket = BrowserSocket.connect(self.parent);
 close(): void;
 ```
 
-Closes the socket causing its state to transition to closing.
+Closes the socket causing its state to transition to `Closing`.
 
 ##### Example
 
@@ -642,6 +642,8 @@ socket.send("👋");
 
 <sup>_Module_</sup>
 
+Internal messages to facilitate the socket API. These messages are filtered from the data received from the socket.
+
 ###### Types
 
 - [Connect](#Connect)
@@ -658,6 +660,114 @@ socket.send("👋");
 - [isMessage](#IsMessage)
 - [isType](#IsType)
 - [typeOf](#typeOf)
+
+#### Connect
+
+<sup>_Type_</sup>
+
+```ts
+type Connect = {
+  address: string;
+  type: Type.Connect;
+};
+```
+
+Sent when a connection is initiated. This starts the "handshake".
+
+#### Connect
+
+<sup>_Type_</sup>
+
+```ts
+type Connected = {
+  type: Type.Connected;
+};
+```
+
+A message indicating the connection is complete and was successful. This concludes the "handshake".
+
+#### Disconnect
+
+<sup>_Type_</sup>
+
+```ts
+type Disconnect = {
+  type: Type.Disconnect;
+};
+```
+
+Sent when a socket is closing so that the other endpoint may preform some cleanup logic or otherwise close the connection gracefully. This starts the "closing handshake".
+
+#### Disconnected
+
+<sup>_Type_</sup>
+
+```ts
+type Disconnected = {
+  type: Type.Disconnected;
+};
+```
+
+A message that acknowledges the disconnection. If this message is received then the disconnect was graceful. This concludes the "closing handshake".
+
+#### Message
+
+<sup>_Type_</sup>
+
+```ts
+export type Message =
+  | Connect
+  | Connected
+  | Disconnect
+  | Disconnected
+  | Ping
+  | Pong;
+```
+
+A variant type for the different types of messages.
+
+#### Ping
+
+<sup>_Type_</sup>
+
+```ts
+type Ping = {
+  id: string;
+  type: Type.Ping;
+};
+```
+
+A ping message may be sent to solicit a response from the other endpoint.
+
+#### Pong
+
+<sup>_Type_</sup>
+
+```ts
+type Pong = {
+  id: string;
+  type: Type.Pong;
+};
+```
+
+A pong message must always be sent in response to a ping message.
+
+#### Type
+
+<sup>_Type_</sup>
+
+```ts
+enum Type {
+  Connect = "Connect",
+  Connected = "Connected",
+  Disconnect = "Disconnect",
+  Disconnected = "Disconnected",
+  Ping = "Ping",
+  Pong = "Pong"
+}
+```
+
+An enumerable of the different types of socket messages.
 
 ### BrowserSocket.State
 
