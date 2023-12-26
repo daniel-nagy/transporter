@@ -206,7 +206,7 @@ Cache.init().get(identity, "🥸"); // NotFound
 has(func: JsFunction.t, args?: SuperJson.t[]): boolean
 ```
 
-Checks if the value is in the cache. If no arguments are provided it will return `true` if any value is cached for the function.
+Checks if the value is in the cache. If no arguments are provided then it will return `true` if any value is cached for the function.
 
 ##### Example
 
@@ -228,7 +228,7 @@ memo<Args extends SuperJson.t[], Return>(
 ): (...args: Args) => Return
 ```
 
-Takes a function as input and returns a memoized version of the same function as output. This is the preferred way of adding values to the cache.
+Takes a function as input and returns a memoized version of the same function as output. Using a memoized function is the preferred way of adding values to the cache.
 
 ##### Example
 
@@ -276,7 +276,7 @@ update<Args extends SuperJson.t[], Return>(
 ): void
 ```
 
-Updates a value in the cache. The callback function will receive the current value in the cache. The next function call will return the new value. Does nothing if there is a cache miss on the value.
+Updates a value in the cache. The callback function will receive the current value in the cache. Does nothing if there is a cache miss on the value.
 
 ##### Example
 
@@ -674,7 +674,7 @@ enum Type {
 
 An enumerable of the different message types.
 
-#### Type
+#### Version
 
 <sup>_Type_</sup>
 
@@ -818,7 +818,7 @@ const metadata = Metadata.get(obj);
 
 The Observable module provides [ReactiveX](https://reactivex.io/) APIs similar to [rxjs](https://rxjs.dev/). If you make heavy use of Observables then you may decide to use rxjs instead.
 
-Transporter observables should have interop with rxjs observables. If you encounter issues transforming to and from rxjs observables you may create a bug ticket.
+Transporter observables should have interop with rxjs observables. If you encounter issues transforming to or from rxjs observables then you may report those issues.
 
 Transporter operators may behave differently than rxjs operators of the same name.
 
