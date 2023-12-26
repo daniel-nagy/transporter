@@ -101,7 +101,7 @@ export class BrowserServer {
   );
 
   /**
-   * Stops the server. Once stopped the server will not longer process requests.
+   * Stops the server. Once stopped the server will no longer receive requests.
    */
   stop() {
     this.#state.next(State.Stopped);

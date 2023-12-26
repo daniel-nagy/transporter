@@ -14,7 +14,8 @@ export type Request = {
   body: StructuredCloneable.t;
   id: string;
   /**
-   * The origin of the client making the request.
+   * The origin of the client making the request.  The origin will be set
+   * securely on the server using `MessageEvent.origin`.
    */
   origin: string;
   type: typeof Type;
@@ -33,7 +34,7 @@ export const Request = ({
   address,
   body,
   id: crypto.randomUUID(),
-  origin: "", // Will be set securely on the server using `MessageEvent.origin`.
+  origin: "",
   type: Type
 });
 

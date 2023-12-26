@@ -150,6 +150,8 @@ Creates a new `BrowserClient`.
 ##### Example
 
 ```ts
+import * as BrowserClient from "@daniel-nagy/transporter-browser/BrowserClient";
+
 const worker = new Worker("/worker.js", { type: "module" });
 const client = BrowserClient.from(worker);
 ```
@@ -167,6 +169,8 @@ Makes a request to a `BrowserServer`.
 ##### Example
 
 ```ts
+import * as BrowserClient from "@daniel-nagy/transporter-browser/BrowserClient";
+
 const worker = new Worker("/worker.js", { type: "module" });
 const client = BrowserClient.from(worker);
 const response = await client.fetch("👋");
@@ -176,6 +180,8 @@ const response = await client.fetch("👋");
 
 <sup>_Module_</sup>
 
+A server receives a `Request` object when a client makes a request.
+
 ###### Types
 
 - [Request](#Request)
@@ -184,9 +190,44 @@ const response = await client.fetch("👋");
 
 - [isRequest](#IsRequest)
 
+#### Request
+
+<sup>_Type_</sup>
+
+```ts
+type Request = {
+  address: string;
+  /**
+   * Contains the value sent by the client.
+   */
+  body: StructuredCloneable.t;
+  id: string;
+  /**
+   * The origin of the client making the request. The origin will be set
+   * securely on the server using `MessageEvent.origin`.
+   */
+  origin: string;
+  type: "Request";
+};
+```
+
+A `Request` is created when a client makes a fetch request.
+
+#### IsRequest
+
+<sup>_Function_</sup>
+
+```ts
+function isRequest(event: MessageEvent): event is MessageEvent<Request>;
+```
+
+Returns `true` if the message event contains a `Request` object.
+
 ### BrowserResponse
 
 <sup>_Module_</sup>
+
+A server sends a `Response` to a client in response to a request.
 
 ###### Types
 
@@ -196,9 +237,38 @@ const response = await client.fetch("👋");
 
 - [isResponse](#IsResponse)
 
+#### Response
+
+<sup>_Type_</sup>
+
+```ts
+type Response = {
+  /**
+   * The payload of the response. This is the value the client will receive.
+   */
+  body: StructuredCloneable.t;
+  id: string;
+  type: "Response;
+};
+```
+
+A `Response` is created from the value returned by the server's request handler.
+
+#### IsResponse
+
+<sup>_Function_</sup>
+
+```ts
+function isResponse(event: MessageEvent): event is MessageEvent<Response>;
+```
+
+Returns `true` if the message event contains a `Response` object.
+
 ### BrowserServer
 
 <sup>_Module_</sup>
+
+A `BrowserServer` provides request/response semantics on top of `postMessage`. It also normalizes the interface for connecting to different types of processes in the browser.
 
 ###### Types
 
@@ -214,6 +284,116 @@ const response = await client.fetch("👋");
 ###### Methods
 
 - [stop](#Stop)
+
+#### BrowserServer
+
+<sup>_Type_</Sup>
+
+```ts
+class BrowserServer {
+  public readonly address: string;
+  public readonly handle: RequestHandler;
+  public readonly state: State;
+  public readonly stateChange: Observable.t<State>;
+  public readonly stopped: Observable.t<State.Stopped>;
+}
+```
+
+A `BrowserServer` listens for incoming requests from clients.
+
+#### Options
+
+<sup>_Type_</sup>
+
+```ts
+type Options = {
+  /**
+   * The address of the server. The default is the empty string. All servers
+   * must have a globally unique address.
+   */
+  address?: string;
+  /**
+   * Called whenever a request is received from a client. The request handler
+   * may return anything that is structured cloneable.
+   *
+   * The request object will contain the origin of the client. The origin can be
+   * used to validate the client before fulfilling the request.
+   */
+  handle: RequestHandler;
+};
+```
+
+Options when creating a `BrowserServer`.
+
+#### RequestHandler
+
+<sup>_Type_</sup>
+
+```ts
+type RequestHandler = (
+  request: Readonly<Request.t>
+) => StructuredCloneable.t | Promise<StructuredCloneable.t>;
+```
+
+A `RequestHandler` receives a `Request` from a client and returns the body of the `Response` that will be sent back to the client.
+
+#### State
+
+<sup>_Type_</sup>
+
+```ts
+enum State {
+  Listening = "Listening",
+  Stopped = "Stopped"
+}
+```
+
+An enumerable of the different server states.
+
+#### Listen
+
+<sup>_Constructor_</sup>
+
+```ts
+function listen(options: Options): BrowserServer;
+```
+
+Creates a new `BrowserServer` in the global scope.
+
+#### Example
+
+```ts
+import * as BrowserServer from "@daniel-nagy/transporter/BrowserServer";
+
+const server = BrowserServer.listen({
+  handle(request) {
+    // Message received from client. Return any response.
+    return "👋";
+  }
+});
+```
+
+#### Stop
+
+<sup>_Method_</sup>
+
+```ts
+stop(): void;
+```
+
+Stops the server. Once stopped the server will no longer receive requests.
+
+#### Example
+
+```ts
+import * as BrowserServer from "@daniel-nagy/transporter/BrowserServer";
+
+const server = BrowserServer.listen({
+  handle(request) {}
+});
+
+server.stop();
+```
 
 ### BrowserSocket
 
