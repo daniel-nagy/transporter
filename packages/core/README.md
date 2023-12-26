@@ -1813,7 +1813,7 @@ const session = Session.server({
 });
 ```
 
-##### Terminate
+#### Terminate
 
 <sup>_Method_</sup>
 
@@ -1827,7 +1827,104 @@ Terminates the session. Terminating the session will complete its input and outp
 
 <sup>_Module_</sup>
 
-A Subject is both an Observable and an Observer. A Subject can be used to multicast an Observable.
+A `Subject` can be used to multicast an `Observable`.
+
+###### Types
+
+- [Subject](#Subject)
+
+###### Constructors
+
+- [init](#Init)
+
+###### Methods
+
+- [asObservable](#AsObservable)
+- [complete](#Complete)
+- [error](#Error)
+- [next](#Next)
+- [subscribe](#Subscribe)
+
+#### Subject
+
+<sup>_Type_</sup>
+
+```ts
+class Subject<T>
+  implements Observable.ObservableLike<T>, Observable.Observer<T> {}
+```
+
+A `Subject` is both an `Observable` and an `Observer`.
+
+#### Init
+
+<sup>_Constructor_</sup>
+
+```ts
+function init<T>(): Subject<T>;
+```
+
+Creates a new `Subject`.
+
+##### Example
+
+```ts
+import * as Subject from "@daniel-nagy/transporter/Subject";
+
+const subject = Subject.init<boolean>();
+```
+
+#### AsObservable
+
+<sup>_Method_</sup>
+
+```ts
+asObservable(): Observable.t<T>;
+```
+
+Transforms the subject into a hot observable.
+
+#### Complete
+
+<sup>_Method_</sup>
+
+```ts
+complete(): void;
+```
+
+Changes the subject's state to `Complete`.
+
+#### Error
+
+<sup>_Method_</sup>
+
+```ts
+error(error: unknown): void;
+```
+
+Changes the subject's state to `Error`.
+
+#### Next
+
+<sup>_Method_</sup>
+
+```ts
+next(value: T): void;
+```
+
+Emits the value to all subscribers.
+
+#### Subscribe
+
+<sup>_Method_</sup>
+
+```ts
+subscribe(
+  observerOrNext?: Observable.Observer<T> | ((value: T) => void)
+): Observable.Subscription;
+```
+
+Subscribes to state changes and values emitted by the subject.
 
 ### Subprotocol
 
