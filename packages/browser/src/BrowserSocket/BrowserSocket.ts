@@ -9,7 +9,7 @@ import * as StructuredCloneable from "../StructuredCloneable.js";
 
 export { BrowserSocket as t };
 
-export interface SocketOptions {
+export interface Options {
   /**
    * The maximum number of messages to buffer before the socket is connected.
    * The default is `Infinity`.
@@ -45,7 +45,7 @@ export interface SocketOptions {
   serverAddress?: string;
 }
 
-export interface PortSocketOptions extends SocketOptions {
+export interface PortOptions extends Options {
   /**
    * When creating a socket from a `MessagePort` you may specify if the socket
    * is connected, bypassing the handshake and synchronously transitioning the
@@ -54,7 +54,7 @@ export interface PortSocketOptions extends SocketOptions {
   connected?: boolean;
 }
 
-export interface WindowSocketOptions extends SocketOptions {
+export interface WindowOptions extends Options {
   /**
    * When connecting to a `Window` you may specify the allowed origin. If the
    * window and the origin do not match the connection will fail. The origin is
@@ -298,17 +298,14 @@ export class BrowserSocket {
  *
  * using socket = BrowserSocket.connect(self.parent);
  */
-export function connect(
-  target: Window,
-  options?: WindowSocketOptions
-): BrowserSocket;
+export function connect(target: Window, options?: WindowOptions): BrowserSocket;
 export function connect(
   target: SharedWorker | Worker,
-  options?: SocketOptions
+  options?: Options
 ): BrowserSocket;
 export function connect(
   target: SharedWorker | Window | Worker,
-  options?: SocketOptions | WindowSocketOptions
+  options?: Options | WindowOptions
 ): BrowserSocket {
   if (target instanceof SharedWorker)
     return connectSharedWorker(target, options);
@@ -325,7 +322,7 @@ export function connect(
  */
 export function fromPort(
   port: MessagePort,
-  { connected = true, ...options }: PortSocketOptions = {}
+  { connected = true, ...options }: PortOptions = {}
 ) {
   port.start();
 
@@ -350,7 +347,7 @@ export function fromPort(
 
 function connectSharedWorker(
   worker: SharedWorker,
-  { serverAddress = "", ...options }: WindowSocketOptions = {}
+  { serverAddress = "", ...options }: WindowOptions = {}
 ) {
   const channel = new MessageChannel();
   const socket = fromPort(channel.port1, {
@@ -364,7 +361,7 @@ function connectSharedWorker(
 
 function connectWindow(
   window: Window,
-  { origin = "*", serverAddress = "", ...options }: WindowSocketOptions = {}
+  { origin = "*", serverAddress = "", ...options }: WindowOptions = {}
 ) {
   const channel = new MessageChannel();
   const socket = fromPort(channel.port1, {
@@ -377,7 +374,7 @@ function connectWindow(
 
 function connectWorker(
   worker: Worker,
-  { serverAddress = "", ...options }: WindowSocketOptions = {}
+  { serverAddress = "", ...options }: WindowOptions = {}
 ) {
   const channel = new MessageChannel();
   const socket = fromPort(channel.port1, {

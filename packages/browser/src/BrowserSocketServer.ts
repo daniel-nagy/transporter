@@ -29,7 +29,7 @@ export type SocketOptions = {
   heartbeatTimeout?: number;
 };
 
-export type SocketServerOptions = {
+export type Options = {
   /**
    * The address of the server. The default is an empty string.
    */
@@ -159,7 +159,7 @@ export class BrowserSocketServer {
  *
  * socketServer.connect.subscribe(socket => socket.send("👋"));
  */
-export function listen(options?: SocketServerOptions) {
+export function listen(options?: Options) {
   const sharedWorker = typeof SharedWorkerGlobalScope !== "undefined";
 
   if (sharedWorker) {
