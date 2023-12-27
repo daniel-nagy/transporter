@@ -46,7 +46,7 @@ A `BehaviorSubject` is a `Subject` that replays the most recent value when subsc
 
 ###### Types
 
-- [BehaviorSubject](#BehaviorSubject)
+- [BehaviorSubject](#BehaviorSubject_BehaviorSubject)
 
 ###### Constructors
 
@@ -56,7 +56,7 @@ A `BehaviorSubject` is a `Subject` that replays the most recent value when subsc
 
 - [getValue](#GetValue)
 
-#### BehaviorSubject
+<h4 id="BehaviorSubject_BehaviorSubject">BehaviorSubject</h4>
 
 <sup>_Type_</sup>
 
@@ -112,7 +112,7 @@ In order to memoize a function its arguments must be serializable. A stable algo
 
 ###### Types
 
-- [Cache](#Cache)
+- [Cache](#Cache_Cache)
 
 ###### Constructors
 
@@ -127,7 +127,7 @@ In order to memoize a function its arguments must be serializable. A stable algo
 - [remove](#Remove)
 - [update](#Update)
 
-#### Cache
+<h4 id="Cache_Cache">Cache</h4>
 
 <sup>_Type_</sup>
 
@@ -298,25 +298,25 @@ An `Injector` is IoC container and can be used to inject dependencies into funct
 
 ###### Types
 
-- [Injector](#Injector)
+- [Injector](#Injector_Injector)
 - [Tag](#Tag)
 
 ###### Constructors
 
-- [Tag](#Tag)
+- [Tag](#Injector_Tag)
 - [empty](#Empty)
 
 ###### Methods
 
-- [add](#Add)
-- [get](#Get)
+- [add](#Injector_Add)
+- [get](#Injector_Get)
 
 ###### Functions
 
 - [getTags](#GetTags)
 - [provide](#Provide)
 
-#### Injector
+<h4 id="Injector_Injector">Injector</h4>
 
 <sup>_Type_</sup>
 
@@ -354,7 +354,7 @@ import * as Injector from "@daniel-nagy/transporter/Injector";
 const injector = Injector.empty();
 ```
 
-#### Tag
+<h4 id="Injector_Tag">Tag</h4>
 
 <sup>_Constructor_</sup>
 
@@ -376,7 +376,7 @@ type Session = {
 const SessionTag = Injector.Tag<Session>();
 ```
 
-#### Add
+<h4 id="Injector_Add">Add</h4>
 
 <sup>_Method_</sup>
 
@@ -400,7 +400,7 @@ const Session: Session = { userId: "User_123" };
 Injector.empty().add(SessionTag, Session);
 ```
 
-#### Get
+<h4 id="Injector_Get">Get</h4>
 
 <sup>_Method_</sup>
 
@@ -483,14 +483,14 @@ A `Json` type may be used as a subprotocol. If both ends of your communication c
 
 ###### Types
 
-- [Json](#Json)
+- [Json](#Json_Json)
 
 ###### Functions
 
 - [serialize](#Serialize)
 - [sortDeep](#SortDeep)
 
-#### Json
+<h4 id="Json_Json">Json</h4>
 
 <sup>_type_</sup>
 
@@ -560,7 +560,7 @@ Defines the Transporter message protocol. The creation and interpretation of mes
 - [CallFunction](#CallFunction)
 - [Error](#Error)
 - [GarbageCollect](#GarbageCollect)
-- [Message](#Message)
+- [Message](#Message_Message)
 - [SetValue](#SetValue)
 - [Type](#Type)
 - [Version](#Version)
@@ -628,7 +628,7 @@ type GarbageCollect = {
 
 A `GarbageCollect` message is sent to the server when a proxy is disposed on the client.
 
-#### Message
+<h4 id="Message_Message">Message</h4>
 
 <sup>_Type_</sup>
 
@@ -830,12 +830,12 @@ Transporter operators may behave differently than rxjs operators of the same nam
 - [EmptyError](#EmptyError)
 - [Event](#Event)
 - [EventTarget](#EventTarget)
-- [Observable](#Observable)
+- [Observable](#Observable_Observable)
 - [ObservableLike](#ObservableLike)
 - [Observer](#Observer)
 - [Operator](#Operator)
 - [Subscription](#Subscription)
-- [State](#Subscription)
+- [State](#State)
 - [TimeoutError](#TimeoutError)
 
 ###### Constructors
@@ -844,7 +844,7 @@ Transporter operators may behave differently than rxjs operators of the same nam
 - [fail](#Fail)
 - [from](#From)
 - [fromEvent](#FromEvent)
-- [of](#Of)
+- [of](#Observable_Of)
 
 ###### Methods
 
@@ -954,7 +954,7 @@ interface EventTarget {
 
 Represents a JavaScript event target. Necessary since Transporter does not include types for a specific runtime.
 
-#### Observable
+<h4 id="Observable_Observable">Observable</h4>
 
 <sup>_Type_</sup>
 
@@ -1112,7 +1112,7 @@ import * as Observable from "@daniel-nagy/transporter/Observable";
 Observable.fromEvent(button, "click");
 ```
 
-#### Of
+<h4 id="Observable_Of">Of</h4>
 
 <sup>_Constructor_</sup>
 
@@ -1447,17 +1447,17 @@ The Proxy module is used to create proxy objects. Transporter will proxy these o
 
 ###### Types
 
-- [Proxy](#Proxy)
+- [Proxy](#Proxy_Proxy)
 
 ###### Constructors
 
-- [from](#From)
+- [from](#Proxy_From)
 
 ###### Functions
 
 - [isProxy](#IsProxy)
 
-#### Proxy
+<h4 id="Proxy_Proxy">Proxy</h4>
 
 <sup>_Type_</sup>
 
@@ -1469,7 +1469,7 @@ type Proxy<T extends object> = JsObject.ReadonlyDeep<
 
 A `Proxy` is a readonly object who's properties are functions.
 
-#### Proxy
+<h4 id="Proxy_From">From</h4>
 
 <sup>_Constructor_</sup>
 
@@ -1531,12 +1531,12 @@ The PubSub module is used to wrap an Observable so that it may be used for pub/s
 ###### Types
 
 - [AsyncObserver](#AsyncObserver)
-- [PubSub](#PubSub)
+- [PubSub](#PubSub_PubSub)
 - [RemoteSubscription](#RemoteSubscription)
 
 ###### Constructors
 
-- [from](#From)
+- [from](#PubSub_From)
 
 #### AsyncObserver
 
@@ -1552,7 +1552,7 @@ type AsyncObserver<T> = {
 
 An `Observer` who's methods are asynchronous.
 
-#### PubSub
+<h4 id="PubSub_PubSub">PubSub</h4>
 
 <sup>_Type_</sup>
 
@@ -1578,7 +1578,7 @@ type RemoteSubscription = {
 
 A `Subscription` that returns a promise when unsubscribed.
 
-#### From
+<h4 id="PubSub_From">From</h4>
 
 <sup>_Constructor_</sup>
 
@@ -1835,21 +1835,21 @@ A `Subject` can be used to multicast an `Observable`.
 
 ###### Types
 
-- [Subject](#Subject)
+- [Subject](#Subject_Subject)
 
 ###### Constructors
 
-- [init](#Init)
+- [init](#Subject_Init)
 
 ###### Methods
 
 - [asObservable](#AsObservable)
 - [complete](#Complete)
-- [error](#Error)
+- [error](#Subject_Error)
 - [next](#Next)
 - [subscribe](#Subscribe)
 
-#### Subject
+<h4 id="Subject_Subject">Subject</h4>
 
 <sup>_Type_</sup>
 
@@ -1860,7 +1860,7 @@ class Subject<T>
 
 A `Subject` is both an `Observable` and an `Observer`.
 
-#### Init
+<h4 id="Subject_Init">Init</h4>
 
 <sup>_Constructor_</sup>
 
@@ -1898,7 +1898,7 @@ complete(): void;
 
 Changes the subject's state to `Complete`.
 
-#### Error
+<h4 id="Subject_Error">Error</h4>
 
 <sup>_Method_</sup>
 
@@ -1944,14 +1944,14 @@ In order to use recursive RPC your subprotocol must be connection-oriented and b
 
 - [ConnectionMode](#ConnectionMode)
 - [OperationMode](#OperationMode)
-- [Protocol](#Protocol)
-- [Subprotocol](#Subprotocol)
+- [Protocol](#Subprotocol_Protocol)
+- [Subprotocol](#Subprotocol_Subprotocol)
 - [TransmissionMode](#TransmissionMode)
 
 ###### Constructors
 
-- [Protocol](#Protocol)
-- [init](#Init)
+- [Protocol](#Subprotocol_Protocol_2)
+- [init](#Subprotocol_Init)
 
 ###### Functions
 
@@ -2004,7 +2004,7 @@ enum OperationMode {
 
 Used to define how data is distributed to nodes in a network.
 
-#### Protocol
+<h4 id="Subprotocol_Protocol">Protocol</h4>
 
 <sup>_Type_</sup>
 
@@ -2014,7 +2014,7 @@ interface Protocol<T> {}
 
 A container type for a subprotocol. This is necessary since TypeScript lacks partial inference of type parameters.
 
-#### Subprotocol
+<h4 id="Subprotocol_Subprotocol">Subprotocol</h4>
 
 <sup>_Type_</sup>
 
@@ -2047,7 +2047,7 @@ enum TransmissionMode {
 
 Used to define how data is transmitted over a network.
 
-#### Protocol
+<h4 id="Subprotocol_Protocol_2">Protocol</h4>
 
 <sup>_Constructor_</sup>
 
@@ -2066,7 +2066,7 @@ import * as Json from "@daniel-nagy/transporter/Json";
 const jsonProtocol = Subprotocol.Protocol<Json.t>();
 ```
 
-#### Init
+<h4 id="Subprotocol_Init">Init</h4>
 
 <sup>_Constructor_</sup>
 
@@ -2129,14 +2129,14 @@ The SuperJson module extends the JSON protocol to include many built-in JavaScri
 
 ###### Types
 
-- [SuperJson](#SuperJson)
+- [SuperJson](#SuperJson_SuperJson)
 
 ###### Functions
 
 - [fromJson](#FromJson)
 - [toJson](#ToJson)
 
-#### SuperJson
+<h4 id="SuperJson_SuperJson">SuperJson</h4>
 
 <sup>_Type_</sup>
 
