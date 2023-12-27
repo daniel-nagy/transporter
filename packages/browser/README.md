@@ -33,10 +33,10 @@ The browser package contains the following modules.
 - [BrowserClient](#BrowserClient)
 - [BrowserRequest](#BrowserRequest)
 - [BrowserResponse](#BrowserResponse)
-- [BrowserServer](#MessaBrowserServerge)
+- [BrowserServer](#BrowserServer)
 - [BrowserSocket](#BrowserSocket)
-- [BrowserSocket.Message](#BrowserSocket.Message)
-- [BrowserSocket.State](#BrowserSocket.State)
+- [BrowserSocket.Message](#BrowserSocketMessage)
+- [BrowserSocket.State](#BrowserSocketState)
 - [BrowserSocketServer](#BrowserSocketServer)
 - [StructuredCloneable](#StructuredCloneable)
 
