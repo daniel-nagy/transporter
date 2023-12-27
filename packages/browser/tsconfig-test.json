@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["DOM", "ES2022", "ESNext.Disposable"],
+    "target": "ES2022",
+    "types": ["mocha"]
+  },
+  "extends": "./tsconfig-base.json",
+  "include": ["src/Test.ts", "src/**/*.test.ts"],
+  "references": [{ "path": "./tsconfig-build.json" }]
+}

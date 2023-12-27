@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "lib": ["ES2022"],
+    "target": "ES2022",
+    "types": ["bun-types"]
+  },
+  "extends": "./tsconfig-base.json",
+  "include": ["src/**/*.test.ts"],
+  "references": [{ "path": "./tsconfig-build.json" }]
+}

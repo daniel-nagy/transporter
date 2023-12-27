@@ -1,13 +1,13 @@
-name: Install Workspace Dependencies
-description: Installs all workspace dependencies.
+name: Install Dependencies
+description: Install all dependencies.
 runs:
   using: "composite"
   steps:
     - name: Install asdf
-      uses: asdf-vm/actions/setup@v1
+      uses: asdf-vm/actions/setup@v2
     - name: Hydrate asdf cache
       id: hydrate-asdf-cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: ${{ env.ASDF_DIR }}
         key: ${{ runner.os }}-${{ hashFiles('.tool-versions') }}
@@ -15,10 +15,10 @@ runs:
       if: steps.hydrate-asdf-cache.outputs.cache-hit != 'true'
       uses: asdf-vm/actions/install@v1
     - name: Hydrate node modules cache
-      uses: actions/cache@v2
+      uses: actions/cache@v3
       with:
         path: "**/node_modules"
-        key: ${{ runner.os }}-${{ hashFiles('**/yarn.lock') }}
+        key: ${{ runner.os }}-${{ hashFiles('**/bun.lockb') }}
     - name: Install node modules
-      run: yarn install --frozen-lockfile
+      run: bun install --frozen-lockfile
       shell: bash
