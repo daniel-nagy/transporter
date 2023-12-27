@@ -19,7 +19,8 @@
     "soa"
   ],
   "files": [
-    "build"
+    "build",
+    "!build/.tsinfo"
   ],
   "exports": {
     "./*": "./build/*.js",
@@ -34,6 +35,7 @@
   "scripts": {
     "prebuild": "bun clean",
     "build": "tsc --project tsconfig-build.json",
+    "postbuild": "cp ../../LICENSE build",
     "clean": "rm -rf node_modules build",
     "eslint": "eslint src",
     "eslint-fix": "eslint src --fix",
