@@ -771,13 +771,13 @@ The Metadata module allows information to be extracted from a proxy.
 
 ###### Types
 
-- [Metadata](#Metadata)
+- [Metadata](#Metadata_Metadata)
 
 ###### Functions
 
-- [get](#Get)
+- [get](#Metadata_Get)
 
-#### Metadata
+<h4 id="Metadata_Metadata">Metadata</h4>
 
 <sup>_Type_<sup>
 
@@ -796,7 +796,7 @@ type Metadata = {
 
 Contains information about a proxy object.
 
-#### Get
+<h4 id="Metadata_Get">Get</h4>
 
 ```ts
 function get<Proxy extends object>(proxy: Proxy): Metadata | null;
@@ -1610,7 +1610,7 @@ The Session module is used to create client and server sessions.
 - [Resource](#Resource)
 - [ServerOptions](#ServerOptions)
 - [ServerSession](#ServerSession)
-- [Session](#Session)
+- [Session](#Session_Session)
 
 ###### Constants
 
@@ -1618,7 +1618,7 @@ The Session module is used to create client and server sessions.
 
 ###### Constructors
 
-- [Resource](#Resource)
+- [Resource](#Session_Resource)
 - [client](#Client)
 - [server](#Server)
 
@@ -1697,7 +1697,7 @@ class ServerSession<Protocol, Value> extends Session<Protocol, Value> {}
 
 A `ServerSession` is created on the server to provide a resource.
 
-#### Session
+<h4 id="Session_Session">Session</h4>
 
 <sup>_Type_</sup>
 
@@ -1724,7 +1724,7 @@ const rootSupervisor = Supervisor.init<Session>("RootSupervisor");
 
 The root supervisor observers all active sessions.
 
-#### Resource
+<h4 id="Session_Resource">Resource</h4>
 
 <sup>_Constructor_</sup>
 
@@ -1847,7 +1847,7 @@ A `Subject` can be used to multicast an `Observable`.
 - [complete](#Complete)
 - [error](#Subject_Error)
 - [next](#Next)
-- [subscribe](#Subscribe)
+- [subscribe](#Subject_Subscribe)
 
 <h4 id="Subject_Subject">Subject</h4>
 
@@ -1918,7 +1918,7 @@ next(value: T): void;
 
 Emits the value to all subscribers.
 
-#### Subscribe
+<h4 id="Subject_Subscribe">Subscribe</h4>
 
 <sup>_Method_</sup>
 
