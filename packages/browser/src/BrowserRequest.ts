@@ -1,4 +1,4 @@
-import * as JsObject from "@daniel-nagy/transporter/JsObject";
+import * as JsObject from "@daniel-nagy/transporter/JsObject.js";
 
 import * as StructuredCloneable from "./StructuredCloneable.js";
 

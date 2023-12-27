@@ -1,7 +1,7 @@
-import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
-import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
-import * as Observable from "@daniel-nagy/transporter/Observable";
-import * as Subject from "@daniel-nagy/transporter/Subject";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook.js";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject.js";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
+import * as Subject from "@daniel-nagy/transporter/Subject.js";
 
 import * as BrowserSocket from "./BrowserSocket/index.js";
 import * as StructuredCloneable from "./StructuredCloneable.js";

@@ -23,7 +23,9 @@
   ],
   "exports": {
     "./*": "./build/*.js",
-    "./BrowserSocket": "./build/BrowserSocket/index.js"
+    "./*.js": "./build/*.js",
+    "./BrowserSocket": "./build/BrowserSocket/index.js",
+    "./BrowserSocket/index.js": "./build/BrowserSocket/index.js"
   },
   "publishConfig": {
     "access": "public",

@@ -1,6 +1,6 @@
-import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
-import * as Observable from "@daniel-nagy/transporter/Observable";
-import * as Subject from "@daniel-nagy/transporter/Subject";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject.js";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
+import * as Subject from "@daniel-nagy/transporter/Subject.js";
 
 import * as Error from "./Error.js";
 import * as Message from "./Message.js";

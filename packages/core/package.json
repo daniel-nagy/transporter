@@ -21,7 +21,9 @@
   ],
   "exports": {
     "./*": "./build/*.js",
-    "./Observable": "./build/Observable/index.js"
+    "./*.js": "./build/*.js",
+    "./Observable": "./build/Observable/index.js",
+    "./Observable/index.js": "./build/Observable/index.js"
   },
   "publishConfig": {
     "access": "public",

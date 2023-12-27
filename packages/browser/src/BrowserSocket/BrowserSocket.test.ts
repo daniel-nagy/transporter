@@ -1,5 +1,5 @@
 import { type SinonSpy, assert, match, spy, useFakeTimers } from "sinon";
-import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
 
 import * as BrowserSocket from "./BrowserSocket.js";
 import * as BrowserSocketServer from "../BrowserSocketServer.js";

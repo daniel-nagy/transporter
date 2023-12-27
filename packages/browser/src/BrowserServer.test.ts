@@ -1,4 +1,4 @@
-import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook.js";
 import { assert, spy } from "sinon";
 
 import * as BrowserServer from "./BrowserServer.js";

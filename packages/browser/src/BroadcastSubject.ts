@@ -1,7 +1,7 @@
-import * as Observable from "@daniel-nagy/transporter/Observable";
-import * as Session from "@daniel-nagy/transporter/Session";
-import * as Subject from "@daniel-nagy/transporter/Subject";
-import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
+import * as Session from "@daniel-nagy/transporter/Session.js";
+import * as Subject from "@daniel-nagy/transporter/Subject.js";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol.js";
 
 import * as StructuredCloneable from "./StructuredCloneable.js";
 

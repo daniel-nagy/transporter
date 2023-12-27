@@ -1,12 +1,12 @@
 import { assert, match, spy } from "sinon";
 
-import * as Cache from "@daniel-nagy/transporter/Cache";
-import * as Injector from "@daniel-nagy/transporter/Injector";
-import * as Observable from "@daniel-nagy/transporter/Observable";
-import * as PubSub from "@daniel-nagy/transporter/PubSub";
-import * as Session from "@daniel-nagy/transporter/Session";
+import * as Cache from "@daniel-nagy/transporter/Cache.js";
+import * as Injector from "@daniel-nagy/transporter/Injector.js";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
+import * as PubSub from "@daniel-nagy/transporter/PubSub.js";
+import * as Session from "@daniel-nagy/transporter/Session.js";
 import * as StructuredCloneable from "./StructuredCloneable.js";
-import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol.js";
 
 import { test } from "./Test.js";
 

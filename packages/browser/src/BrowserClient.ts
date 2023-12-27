@@ -1,4 +1,4 @@
-import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
 
 import * as Request from "./BrowserRequest.js";
 import * as Response from "./BrowserResponse.js";

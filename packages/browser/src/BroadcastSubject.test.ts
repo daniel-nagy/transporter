@@ -1,4 +1,4 @@
-import { firstValueFrom } from "@daniel-nagy/transporter/Observable";
+import { firstValueFrom } from "@daniel-nagy/transporter/Observable/index.js";
 import { assert, spy } from "sinon";
 
 import * as BroadcastSubject from "./BroadcastSubject.js";

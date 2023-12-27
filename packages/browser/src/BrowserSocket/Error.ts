@@ -1,4 +1,4 @@
-import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
 
 export class ConnectTimeoutError extends Error {
   readonly name = "ConnectTimeoutError";

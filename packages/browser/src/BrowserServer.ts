@@ -1,6 +1,6 @@
-import * as AddressBook from "@daniel-nagy/transporter/AddressBook";
-import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject";
-import * as Observable from "@daniel-nagy/transporter/Observable";
+import * as AddressBook from "@daniel-nagy/transporter/AddressBook.js";
+import * as BehaviorSubject from "@daniel-nagy/transporter/BehaviorSubject.js";
+import * as Observable from "@daniel-nagy/transporter/Observable/index.js";
 
 import * as Request from "./BrowserRequest.js";
 import * as Response from "./BrowserResponse.js";
