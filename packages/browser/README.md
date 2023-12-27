@@ -6,7 +6,24 @@ The browser package contains APIs designed to work in the browser.
 npm add @daniel-nagy/transporter @daniel-nagy/transporter-browser
 ```
 
-Transporter is distributed as ES modules. Transporter may also be imported directly in the browser from a URL.
+Transporter is distributed as ES modules.
+
+Transporter may also be imported directly in the browser from a URL. For example,
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "@daniel-nagy/transporter/": "https://unpkg.com/@daniel-nagy/transporter@1.0.0-beta.3/build/",
+      "@daniel-nagy/transporter-browser/": "https://unpkg.com/@daniel-nagy/transporter-browser@1.0.0-beta.3/build/"
+    }
+  }
+</script>
+<script type="module">
+  import * as BrowserServer from "@daniel-nagy/transporter-browser/BrowserServer.js";
+  import * as Session from "@daniel-nagy/transporter/Session.js";
+</script>
+```
 
 ## API
 
@@ -31,13 +48,13 @@ A `BroadcastSubject` can be used to synchronize state between same-origin browsi
 
 ###### Types
 
-- [BroadcastSubject](#BroadcastSubject)
+- [BroadcastSubject](#BroadcastSubject_BroadcastSubject)
 
 ###### Constructors
 
 - [fromChannel](#FromChannel)
 
-#### BroadcastSubject
+<h4 id="BroadcastSubject_BroadcastSubject">BroadcastSubject</h4>
 
 <sup>_Type_</sup>
 
@@ -75,7 +92,7 @@ An interface for making requests to a browsing context or worker.
 
 ###### Types
 
-- [BrowserClient](#BrowserClient)
+- [BrowserClient](#BrowserClient_BrowserClient)
 - [Options](#Options)
 
 ###### Constructors
@@ -84,9 +101,9 @@ An interface for making requests to a browsing context or worker.
 
 ###### Methods
 
-- [fetch](Fetch)
+- [fetch](#Fetch)
 
-#### BrowserClient
+<h4 id="BrowserClient_BrowserClient">BrowserClient</h4>
 
 <sup>_Type_</sup>
 
@@ -272,8 +289,8 @@ A `BrowserServer` provides request/response semantics on top of `postMessage`. I
 
 ###### Types
 
-- [BrowserServer](#BrowserServer)
-- [Options](#Options)
+- [BrowserServer](#BrowserServer_BrowserServer)
+- [Options](#BrowserServer_Options)
 - [RequestHandler](#RequestHandler)
 - [State](#State)
 
@@ -285,7 +302,7 @@ A `BrowserServer` provides request/response semantics on top of `postMessage`. I
 
 - [stop](#Stop)
 
-#### BrowserServer
+<h4 id="BrowserServer_BrowserServer">BrowserServer</h4>
 
 <sup>_Type_</Sup>
 
@@ -301,7 +318,7 @@ class BrowserServer {
 
 A `BrowserServer` listens for incoming requests from clients.
 
-#### Options
+<h4 id="BrowserServer_Options">Options</h4>
 
 <sup>_Type_</sup>
 
@@ -404,12 +421,12 @@ Provides a socket API on top of `postMessage` that is similar to the WebSocket A
 
 ###### Types
 
-- [BrowserSocket](#BrowserSocket)
+- [BrowserSocket](#BrowserSocket_BrowserSocket)
 - [ConnectionError](#ConnectionError)
 - [ConnectTimeoutError](#ConnectTimeoutError)
 - [DisconnectTimeoutError](#DisconnectTimeoutError)
 - [HeartbeatTimeoutError](#HeartbeatTimeoutError)
-- [Options](#Options)
+- [Options](#BrowserSocket_Options)
 - [WindowOptions](#WindowOptions)
 
 ###### Constructors
@@ -422,7 +439,7 @@ Provides a socket API on top of `postMessage` that is similar to the WebSocket A
 - [ping](#Ping)
 - [send](#Send)
 
-#### BrowserSocket
+<h4 id="BrowserSocket_BrowserSocket">BrowserSocket</h4>
 
 <sup>_Type_</sup>
 
@@ -502,7 +519,7 @@ class HeartbeatTimeoutError extends Error {}
 
 Used to indicate that a response to a health-check was not received in the allotted time.
 
-#### Options
+<h4 id="BrowserSocket_Options">Options</h4>
 
 <sup>_Type_</sup>
 
@@ -651,7 +668,7 @@ Internal messages to facilitate the socket API. These messages are filtered from
 - [Disconnect](#Disconnect)
 - [Disconnected](#Disconnected)
 - [Message](#Message)
-- [Ping](#Ping)
+- [Ping](#Message_Ping)
 - [Pong](#Pong)
 - [Type](#Type)
 
@@ -726,7 +743,7 @@ export type Message =
 
 A variant type for the different types of messages.
 
-#### Ping
+<h4 id="Message_Ping">Ping</h4>
 
 <sup>_Type_</sup>
 
@@ -821,8 +838,8 @@ A socket's state.
 - [Closing](#Closing)
 - [Connected](#Connected)
 - [Connecting](#Connecting)
-- [State](#State)
-- [Type](#Type)
+- [State](#State_State)
+- [Type](#State_Type)
 
 #### Closed
 
@@ -874,7 +891,7 @@ type Connecting = {
 
 The socket is connecting.
 
-#### State
+<h4 id="State_State">State</h4>
 
 <sup>_Type_</sup>
 
@@ -888,6 +905,21 @@ type State =
 
 A variant type for the different socket states.
 
+<h4 id="State_Type">Type</h4>
+
+<sup>_Type_</sup>
+
+```ts
+enum Type {
+  Connecting = "Connecting",
+  Connected = "Connected",
+  Closing = "Closing",
+  Closed = "Closed"
+}
+```
+
+An enumerable of the different socket states.
+
 ### BrowserSocketServer
 
 <sup>_Module_</sup>
@@ -896,20 +928,20 @@ A `BrowserSocketServer` listens for socket connect requests. When a request is r
 
 ###### Types
 
-- [BrowserSocketServer](#BrowserSocketServer)
-- [Options](#Options)
+- [BrowserSocketServer](#BrowserSocketServer_BrowserSocketServer)
+- [Options](#BrowserSocketServer_Options)
 - [SocketOptions](#SocketOptions)
-- [State](#State)
+- [State](#BrowserSocketServer_State)
 
 ###### Constructors
 
-- [listen](#Listen)
+- [listen](#BrowserSocketServer_Listen)
 
 ###### Methods
 
-- [stop](#Stop)
+- [stop](#BrowserSocketServer_Stop)
 
-#### BrowserSocketServer
+<h4 id="BrowserSocketServer_BrowserSocketServer">BrowserSocketServer</h4>
 
 <sup>_Type_</sup>
 
@@ -925,7 +957,7 @@ class BrowserSocketServer {
 
 Creates socket connections as requests come in.
 
-#### Options
+<h4 id="BrowserSocketServer_Options">Options</h4>
 
 <sup>_Type_</sup>
 
@@ -963,7 +995,7 @@ type SocketOptions = {
 
 Options forwarded to the `BrowserSocket` when it is created.
 
-#### State
+<h4 id="BrowserSocketServer_State">State</h4>
 
 <sup>_Type_</sup>
 
@@ -976,7 +1008,7 @@ enum State {
 
 An enumerable of the different server states.
 
-#### Listen
+<h4 id="BrowserSocketServer_Listen">Listen</h4>
 
 <sup>_Constructor_</sup>
 
@@ -995,7 +1027,7 @@ const server = BrowserSocketServer.listen();
 server.connect.subscribe((socket) => socket.send("👋"));
 ```
 
-#### Stop
+<h4 id="BrowserSocketServer_Stop">Stop</h4>
 
 <sup>_Method_</sup>
 
@@ -1022,10 +1054,10 @@ A `StructuredCloneable` type can be passed between processes in the browser.
 
 ###### Types
 
-- [StructuredCloneable](#StructuredCloneable)
+- [StructuredCloneable](#StructuredCloneable_StructuredCloneable)
 - [TypedArray](#TypedArray)
 
-#### StructuredCloneable
+<h4 id="StructuredCloneable_StructuredCloneable">StructuredCloneable</h4>
 
 <sup>_Type_</sup>
 
