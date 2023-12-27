@@ -663,7 +663,7 @@ Internal messages to facilitate the socket API. These messages are filtered from
 
 ###### Types
 
-- [Connect](#Connect)
+- [Connect](#Message_Connect)
 - [Connected](#Connected)
 - [Disconnect](#Disconnect)
 - [Disconnected](#Disconnected)
@@ -678,7 +678,7 @@ Internal messages to facilitate the socket API. These messages are filtered from
 - [isType](#IsType)
 - [typeOf](#typeOf)
 
-#### Connect
+<h4 id="Message_Connect">Connect</h4>
 
 <sup>_Type_</sup>
 
@@ -836,7 +836,7 @@ A socket's state.
 
 - [Closed](#Closed)
 - [Closing](#Closing)
-- [Connected](#Connected)
+- [Connected](#State_Connected)
 - [Connecting](#Connecting)
 - [State](#State_State)
 - [Type](#State_Type)
@@ -867,7 +867,7 @@ type Closing<E> = {
 
 The socket is closing, possibly with an error.
 
-#### Connected
+<h4 id="State_Connected">Connected</h4>
 
 <sup>_Type_</sup>
 
