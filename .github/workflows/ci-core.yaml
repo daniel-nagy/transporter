@@ -2,18 +2,17 @@ name: CI
 on:
   pull_request:
     paths:
+      - .github/**
       - packages/core/**
-    paths-ignore:
-      - packages/core/.gitignore
-      - packages/core/README.md
-  push:
+      - !packages/core/.gitignore
+      - !packages/core/README.md
     branches:
       - main
     paths:
+      - .github/**
       - packages/core/**
-    paths-ignore:
-      - packages/core/.gitignore
-      - packages/core/README.md
+      - !packages/core/.gitignore
+      - !packages/core/README.md
 jobs:
   build:
     runs-on: ubuntu-latest
