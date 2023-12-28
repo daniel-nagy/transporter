@@ -56,4 +56,6 @@ jobs:
       - name: Install playwright dependencies
         uses: ./.github/actions/install-playwright-dependencies
       - name: Run tests
-        run: bun --cwd packages/browser test
+        run: |
+          bun --cwd packages/core build
+          bun --cwd packages/browser test
