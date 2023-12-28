@@ -1,21 +1,21 @@
-name: CI
+name: CI Browser
 on:
   pull_request:
     paths:
+      - .github/**
       - packages/browser/**
       - packages/core/**
-    paths-ignore:
-      - packages/**/.gitignore
-      - packages/**/README.md
+      - "!packages/**/.gitignore"
+      - "!packages/**/README.md"
   push:
     branches:
       - main
     paths:
+      - .github/**
       - packages/browser/**
       - packages/core/**
-    paths-ignore:
-      - packages/**/.gitignore
-      - packages/**/README.md
+      - "!packages/**/.gitignore"
+      - "!packages/**/README.md"
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -25,7 +25,9 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
       - name: Build package
-        run: bun --cwd packages/browser build
+        run: |
+          bun --cwd packages/core build
+          bun --cwd packages/browser build
   eslint:
     runs-on: ubuntu-latest
     steps:
@@ -54,4 +56,6 @@ jobs:
       - name: Install playwright dependencies
         uses: ./.github/actions/install-playwright-dependencies
       - name: Run tests
-        run: bun --cwd packages/browser test
+        run: |
+          bun --cwd packages/core build
+          bun --cwd packages/browser test

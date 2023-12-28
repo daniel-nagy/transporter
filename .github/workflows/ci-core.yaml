@@ -1,19 +1,19 @@
-name: CI
+name: CI Core
 on:
   pull_request:
     paths:
+      - .github/**
       - packages/core/**
-    paths-ignore:
-      - packages/core/.gitignore
-      - packages/core/README.md
+      - "!packages/core/.gitignore"
+      - "!packages/core/README.md"
   push:
     branches:
       - main
     paths:
+      - .github/**
       - packages/core/**
-    paths-ignore:
-      - packages/core/.gitignore
-      - packages/core/README.md
+      - "!packages/core/.gitignore"
+      - "!packages/core/README.md"
 jobs:
   build:
     runs-on: ubuntu-latest

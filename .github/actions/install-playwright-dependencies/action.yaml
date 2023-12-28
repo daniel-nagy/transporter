@@ -7,8 +7,7 @@ runs:
       id: playwright-info
       run: |
         version=$(
-          npm ls @playwright/test --json \
-          | jq --raw-output '.dependencies["@playwright/test"].version'
+          npm explain playwright --json | jq --raw-output '.[0].version'
         )
         echo "version=$version" >> $GITHUB_OUTPUT
       shell: bash
