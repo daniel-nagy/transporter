@@ -25,7 +25,9 @@ jobs:
       - name: Install dependencies
         uses: ./.github/actions/install-dependencies
       - name: Build package
-        run: bun --cwd packages/browser build
+        run: |
+          bun --cwd packages/core build
+          bun --cwd packages/browser build
   eslint:
     runs-on: ubuntu-latest
     steps:
