@@ -4,15 +4,15 @@ on:
     paths:
       - .github/**
       - packages/core/**
-      - !packages/core/.gitignore
-      - !packages/core/README.md
+      - "!packages/core/.gitignore"
+      - "!packages/core/README.md"
     branches:
       - main
     paths:
       - .github/**
       - packages/core/**
-      - !packages/core/.gitignore
-      - !packages/core/README.md
+      - "!packages/core/.gitignore"
+      - "!packages/core/README.md"
 jobs:
   build:
     runs-on: ubuntu-latest

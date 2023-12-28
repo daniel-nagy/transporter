@@ -5,8 +5,8 @@ on:
       - .github/**
       - packages/browser/**
       - packages/core/**
-      - !packages/**/.gitignore
-      - !packages/**/README.md
+      - "!packages/**/.gitignore"
+      - "!packages/**/README.md"
   push:
     branches:
       - main
@@ -14,8 +14,8 @@ on:
       - .github/**
       - packages/browser/**
       - packages/core/**
-      - !packages/**/.gitignore
-      - !packages/**/README.md
+      - "!packages/**/.gitignore"
+      - "!packages/**/README.md"
 jobs:
   build:
     runs-on: ubuntu-latest
