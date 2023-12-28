@@ -6,6 +6,7 @@ on:
       - packages/core/**
       - "!packages/core/.gitignore"
       - "!packages/core/README.md"
+  push:
     branches:
       - main
     paths:
