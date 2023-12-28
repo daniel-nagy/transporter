@@ -1,4 +1,4 @@
-name: CI
+name: CI Browser
 on:
   pull_request:
     paths:

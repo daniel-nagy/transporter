@@ -1,4 +1,4 @@
-name: CI
+name: CI Core
 on:
   pull_request:
     paths:
