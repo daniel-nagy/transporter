@@ -57,3 +57,16 @@ As of beta 3 Transporter is nearing API stability but there may still be some br
 
 - [core](/packages/core) - Core APIs that are designed to work in any JavaScript runtime.
 - [browser](/packages/browser) - Wrappers around the browser's messaging APIs that provide normalized interfaces and additional semantics.
+
+### Examples
+
+Here are some examples to help you learn Transporter and become inspired ✨.
+
+#### Using Browser Sockets to Communicate with iFrames
+
+[codesandbox.io](https://codesandbox.io/p/devbox/transporter-iframe-example-tymcnh)
+
+This example is a pretty basic todo app. However, what's not so basic is that the app is composed of 3 frames; a top frame and 2 subframes. The top frame holds the app state and renders the 2 subframes. The first subframe renders a form for adding new todos. The second subframe renders a list of the current todos. The state of all 3 frames is syncroized using Transporter.
+
+This example uses React but Transporter is framework agnostics and can work with any Framework. There is an issue with React Fast Refresh and likely HMR in general. This issue should be investigated before the release of v1.0.0.
+
