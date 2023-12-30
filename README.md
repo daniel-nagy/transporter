@@ -70,3 +70,11 @@ This example is a pretty basic todo app. However, what's not so basic is that th
 
 This example uses React but Transporter is framework agnostics and can work with any Framework. There is an issue with React Fast Refresh and likely HMR in general. This issue should be investigated before the release of v1.0.0.
 
+#### Communicating with a Webview in React Native
+
+[snack.expo.dev](https://snack.expo.dev/@daniel_nagy/transporter-test)
+
+This example renders a webview with a button to scan a barcode. When the button is tapped it will use the `BarCodeScanner` component from Expo to access the camera to scan a barcode. Because this example uses the camera you will need to run it on a real device. I just use the Expo Go app on my phone.
+
+Transporter does not currently offer any React Native specific APIs. However, I may add React Native specific APIs similar to the browser APIs. It's just that React Native can be... let's just say "time consuming".
+
