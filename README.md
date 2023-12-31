@@ -62,11 +62,17 @@ As of beta 3 Transporter is nearing API stability but there may still be some br
 
 Here are some examples to help you learn Transporter and become inspired ✨.
 
+#### Using Transporter to build End-To-End Typesafe Applications
+
+[codesandbox.io](https://codesandbox.io/p/devbox/transporter-fullstack-example-st2647)
+
+This example uses [Prisma](https://www.prisma.io/), [React Query](https://tanstack.com/query/latest), and Transporter to build a TypeScript application. What's neat is you can use Transporter to expose your Prisma client to the FE to quickly start prototyping without doing much API work. However, when you're ready to grow your API Transporter is ready to grow with you.
+
 #### Using Browser Sockets to Communicate with iFrames
 
 [codesandbox.io](https://codesandbox.io/p/devbox/transporter-iframe-example-tymcnh)
 
-This example is a pretty basic todo app. However, what's not so basic is that the app is composed of 3 frames; a top frame and 2 subframes. The top frame holds the app state and renders the 2 subframes. The first subframe renders a form for adding new todos. The second subframe renders a list of the current todos. The state of all 3 frames is syncroized using Transporter.
+This example is a pretty basic todo app. However, what's not so basic is that the app is composed of 3 frames; a top frame and 2 subframes. The top frame holds the app state and renders 2 subframes. The first subframe renders a form for adding new todos. The second subframe renders a list of the current todos. The state of all 3 frames is syncroized using Transporter.
 
 This example uses React but Transporter is framework agnostics and can work with any Framework. There is an issue with React Fast Refresh and likely HMR in general. This issue should be investigated before the release of v1.0.0.
 
@@ -76,5 +82,5 @@ This example uses React but Transporter is framework agnostics and can work with
 
 This example renders a webview with a button to scan a barcode. When the button is tapped it will use the `BarCodeScanner` component from Expo to access the camera to scan a barcode. Because this example uses the camera you will need to run it on a real device. I just use the Expo Go app on my phone.
 
-Transporter does not currently offer any React Native specific APIs. However, I may add React Native specific APIs similar to the browser APIs. It's just that React Native can be... let's just say "time consuming".
+Transporter does not currently offer any React Native specific APIs. However, I may add React Native specific APIs similar to the browser APIs. It's just that React Native can be..._time consuming_.
 
