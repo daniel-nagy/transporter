@@ -24,7 +24,15 @@ describe("decorating functions", () => {
   test("providing a value to a function with additional arguments", () => {
     const Tag = Injector.Tag<string>();
     // $ExpectType (_b: number) => void
-    Injector.provide([Tag], (_a: string, _b: number) => {});
+    Injector.provide([Tag], (_a, _b: number) => {});
+    //                       ^? (parameter) _a: string
+  });
+
+  // TODO: See if type of injected dependency can be inferred when using generics.
+  test("generics propagate", () => {
+    const Tag = Injector.Tag<string>();
+    // $ExpectType <B>(_b: B) => void
+    Injector.provide([Tag], <B>(_a: string, _b: B) => {});
   });
 
   test("providing multiple values to a function", () => {
