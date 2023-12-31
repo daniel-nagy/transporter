@@ -20,6 +20,14 @@ export type Options = {
   origin?: string;
 };
 
+/**
+ * An atom that symbolizes a `ServiceWorker`. When used as a target the client
+ * will make requests to the currently active `ServiceWorker`.
+ */
+export const SW = Symbol.for("ServiceWorker");
+
+export type SW = typeof SW;
+
 export class BrowserClient {
   /**
    * The address of the server. An address is like a port number, except an
@@ -37,7 +45,7 @@ export class BrowserClient {
   /**
    * The message target. A message target is like a server host.
    */
-  public readonly target: Window | Worker | SharedWorker | ServiceWorker;
+  public readonly target: Window | Worker | SharedWorker | SW;
 
   constructor({
     address = "",
@@ -46,7 +54,7 @@ export class BrowserClient {
   }: {
     address?: string;
     origin?: string;
-    target: Window | Worker | SharedWorker | ServiceWorker;
+    target: Window | Worker | SharedWorker | SW;
   }) {
     this.serverAddress = address;
     this.origin = origin;
@@ -58,7 +66,7 @@ export class BrowserClient {
    * response from the server.
    */
   async fetch(body: StructuredCloneable.t): Promise<StructuredCloneable.t> {
-    const messageSink = getMessageSink(this.target);
+    const messageSink = await getMessageSink(this.target);
     const messageSource = getMessageSource(this.target);
     const request = Request.t({ address: this.serverAddress, body });
 
@@ -72,10 +80,6 @@ export class BrowserClient {
       ),
       Observable.map((message) => message.data.body)
     );
-
-    // Not sure it this is necessary or useful.
-    if (this.target instanceof ServiceWorker)
-      await navigator.serviceWorker.ready;
 
     messageSink.postMessage(request, { targetOrigin: this.origin });
 
@@ -94,17 +98,17 @@ export class BrowserClient {
  * const response = await client.fetch("👋");
  */
 export function from(
-  target: Window | Worker | SharedWorker | ServiceWorker,
+  target: Window | Worker | SharedWorker | SW,
   options: Options = {}
 ) {
   if (target instanceof SharedWorker) target.port.start();
   return new BrowserClient({ ...options, target });
 }
 
-function getMessageSink(
-  target: Window | Worker | SharedWorker | ServiceWorker
-) {
+function getMessageSink(target: Window | Worker | SharedWorker | SW) {
   switch (true) {
+    case target === SW:
+      return navigator.serviceWorker.ready.then((r) => r.active!);
     case target instanceof SharedWorker:
       return target.port;
     default:
@@ -112,11 +116,9 @@ function getMessageSink(
   }
 }
 
-function getMessageSource(
-  target: Window | Worker | SharedWorker | ServiceWorker
-) {
+function getMessageSource(target: Window | Worker | SharedWorker | SW) {
   switch (true) {
-    case target instanceof ServiceWorker:
+    case target === SW:
       return navigator.serviceWorker;
     case target instanceof SharedWorker:
       return target.port;

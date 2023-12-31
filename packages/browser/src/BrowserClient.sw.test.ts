@@ -14,7 +14,7 @@ afterEach(async () => {
 });
 
 test("a frame making a request to a service worker", async () => {
-  const [worker] = await Test.createServiceWorker(/* ts */ `
+  await Test.createServiceWorker(/* ts */ `
     import * as BrowserServer from "http://localhost:8000/packages/browser/src/BrowserServer.ts";
 
     const server = BrowserServer.listen({
@@ -24,7 +24,7 @@ test("a frame making a request to a service worker", async () => {
     });
   `);
 
-  const client = BrowserClient.from(worker);
+  const client = BrowserClient.from(BrowserClient.SW);
   const response = await client.fetch();
 
   assert.match(response, "hi from the worker");

@@ -95,6 +95,10 @@ An interface for making requests to a browsing context or worker.
 - [BrowserClient](#BrowserClient_BrowserClient)
 - [Options](#Options)
 
+###### Constants
+
+- [WS](#WS)
+
 ###### Constructors
 
 - [from](#From)
@@ -150,6 +154,28 @@ type Options = {
 ```
 
 Options when creating a `BrowserClient`.
+
+#### WS
+
+<sup>_Constant_</sup>
+
+```ts
+const SW = Symbol.for("ServiceWorker");
+```
+
+An atom that symbolizes a `ServiceWorker`. When used as a target the client will make requests to the currently active `ServiceWorker`.
+
+##### Example
+
+```ts
+import * as BrowserClient from "@daniel-nagy/transporter-browser/BrowserClient";
+
+await navigator.serviceWorker.register("./sw.js", {
+  type: "module"
+});
+
+const client = BrowserClient.from(BrowserClient.SW);
+```
 
 #### From
 
