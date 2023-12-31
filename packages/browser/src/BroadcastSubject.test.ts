@@ -11,6 +11,7 @@ test("using a broadcast subject to synchronize state between two same-origin bro
   const next = spy();
 
   darkMode.subscribe(next);
+  const change = firstValueFrom(darkMode);
 
   await Test.createIframe(
     /* html */ `
@@ -23,7 +24,7 @@ test("using a broadcast subject to synchronize state between two same-origin bro
     { crossOrigin: false }
   );
 
-  await firstValueFrom(darkMode);
+  await change;
 
   assert.calledOnce(next);
   assert.calledWith(next, true);
