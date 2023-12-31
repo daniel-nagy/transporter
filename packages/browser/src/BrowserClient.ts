@@ -21,8 +21,8 @@ export type Options = {
 };
 
 /**
- * An atom that symbolizes a ServiceWorker. When used as a target the client
- * will make requests to the currently active ServiceWorker.
+ * An atom that symbolizes a `ServiceWorker`. When used as a target the client
+ * will make requests to the currently active `ServiceWorker`.
  */
 export const SW = Symbol.for("ServiceWorker");
 
