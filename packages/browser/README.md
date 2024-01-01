@@ -97,7 +97,7 @@ An interface for making requests to a browsing context or worker.
 
 ###### Constants
 
-- [WS](#WS)
+- [SW](#SW)
 
 ###### Constructors
 
@@ -155,7 +155,7 @@ type Options = {
 
 Options when creating a `BrowserClient`.
 
-#### WS
+#### SW
 
 <sup>_Constant_</sup>
 
