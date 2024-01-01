@@ -127,7 +127,7 @@ class BrowserClient {
   /**
    * The message target. A message target is like a server host.
    */
-  public readonly target: Window | Worker | SharedWorker | ServiceWorker;
+  public readonly target: Window | Worker | SharedWorker | SW;
 }
 ```
 
@@ -183,7 +183,7 @@ const client = BrowserClient.from(BrowserClient.SW);
 
 ```ts
 function from(
-  target: Window | Worker | SharedWorker | ServiceWorker,
+  target: Window | Worker | SharedWorker | SW,
   options?: Options
 ): BrowserClient;
 ```
