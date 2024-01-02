@@ -11,6 +11,8 @@ Transporter is an RPC library for typesafe distributed computing. The Transporte
 
 Message passing can quickly grow in complexity, cause race conditions, and make apps difficult to maintain. Transporter eliminates the cognitive overhead associated with message passing by enabling the use of functions as a means of communication between distributed systems.
 
+For an introduction to Transporter check out my [blog post](https://danielnagy.me/posts/Post_s2fh85ot8gqd)!
+
 ### Features
 
 - 👌 Typesaftey without code generation.[^1]
