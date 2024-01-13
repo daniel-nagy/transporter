@@ -219,7 +219,7 @@ session.output
 const client = session.createProxy();
 ```
 
-We take the output of our client session and map over it to do some protocol stacking and make our fetch request. We then, like an ouroboros, feed the response back into our client session to complete the circuit. While slightly more keystroke than alternative libraries, this example is endlessly adaptable and customizable.
+We take the output of our client session and map over it to do some protocol stacking and make our fetch request. We then, like an ouroboros, feed the response back into our client session to complete the circuit. While slightly more keystrokes than alternative libraries, this example is endlessly adaptable and customizable.
 
 We just learned that a session is both a message source and a message sink. We also learned that the core API of Transporter is transport layer agnostic. To get Transporter working with any transport layer we just need to complete the circuit.
 
@@ -227,7 +227,7 @@ We just learned that a session is both a message source and a message sink. We a
 
 The modes are used to determine if recursive RPC is enabled or not. Recursive RPC refers to including functions or proxies in function IO. This is an interesting concept because it allows state to be held between processes on the call stack. To enable recursive RPC your transport protocol must be connection-oriented and bidirectional. A transport protocol is bidirectional if its transmission mode is `Duplex` or `HalfDuplex` and its operation mode is `Unicast`.
 
-It is important to make sure your subprotocol and your transport layer are compatible. For example, HTTP is a connectionless protocol. So even though it is bidirectional you should not use recursive RPC if you are using HTTP as your transport protocol. Fortunately, when using Transporter with WebSockets, in the browser, React Native, or in Electron apps you often can enable recursive RPC. When HTTP/3 becomes mainstream then you may be able to use recursive RPC over HTTP as well. For completeness here is an example subprotocol that would enable recursive RPC.
+It is important to make sure your subprotocol and your transport layer are compatible. For example, HTTP is a connectionless protocol. So even though it is bidirectional you should not use recursive RPC if you are using HTTP as your transport protocol. Fortunately, when using Transporter with WebSockets, in the browser, React Native, or in Electron apps you often can enable recursive RPC. It may be possible to use recursive RPC with HTTP streaming. If `WebTransport` becomes generally available then that would likely allow recursive RPC over HTTP. For completeness here is an example subprotocol that would enable recursive RPC.
 
 ```ts
 const protocol = Subprotocol.init({
