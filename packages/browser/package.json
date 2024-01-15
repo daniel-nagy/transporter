@@ -1,7 +1,7 @@
 {
   "name": "@daniel-nagy/transporter-browser",
   "type": "module",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "Typesafe distributed computing in the browser.",
   "author": "Daniel Nagy <1622446+daniel-nagy@users.noreply.github.com>",
   "repository": "github:daniel-nagy/transporter",
@@ -59,6 +59,6 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
-    "@daniel-nagy/transporter": "1.0.0-beta.4"
+    "@daniel-nagy/transporter": "1.0.0-beta.5"
   }
 }

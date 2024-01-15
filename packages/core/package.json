@@ -1,7 +1,7 @@
 {
   "name": "@daniel-nagy/transporter",
   "type": "module",
-  "version": "1.0.0-beta.4",
+  "version": "1.0.0-beta.5",
   "description": "Typesafe distributed computing in TypeScript.",
   "author": "Daniel Nagy <1622446+daniel-nagy@users.noreply.github.com>",
   "repository": "github:daniel-nagy/transporter",
