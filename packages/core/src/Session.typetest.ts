@@ -7,8 +7,8 @@ import * as Subprotocol from "./Subprotocol.js";
 describe("recursive protocols", () => {
   const protocol = Subprotocol.init({
     connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,
+    dataType: Subprotocol.DataType<Json.t>(),
     operationMode: Subprotocol.OperationMode.Unicast,
-    protocol: Subprotocol.Protocol<Json.t>(),
     transmissionMode: Subprotocol.TransmissionMode.Duplex
   });
 
@@ -562,8 +562,8 @@ describe("recursive protocols", () => {
 describe("unidirectional protocols", () => {
   const protocol = Subprotocol.init({
     connectionMode: Subprotocol.ConnectionMode.Connectionless,
+    dataType: Subprotocol.DataType<Json.t>(),
     operationMode: Subprotocol.OperationMode.Broadcast,
-    protocol: Subprotocol.Protocol<Json.t>(),
     transmissionMode: Subprotocol.TransmissionMode.Simplex
   });
 

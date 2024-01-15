@@ -377,8 +377,8 @@ test("memoizing a proxied function", async () => {
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,
+  dataType: Subprotocol.DataType<StructuredCloneable.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<StructuredCloneable.t>(),
   transmissionMode: Subprotocol.TransmissionMode.Duplex
 });
 
@@ -396,13 +396,13 @@ function expose<const T>(
   } = {}
 ) {
   const client = Session.client({
-    protocol: protocol,
+    protocol,
     resource: Session.Resource<T>()
   });
 
   const server = Session.server({
     ...serverConfig,
-    protocol: protocol,
+    protocol,
     provide: value
   });
 

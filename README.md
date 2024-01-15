@@ -72,7 +72,7 @@ Here's our `User` module.
 const users = [
   { id: 0, name: "Dan" },
   { id: 1, name: "Jessica" },
-  { id: 2, name: "Mike" }
+  { id: 2, name: "Mike" },
 ];
 
 export async function list() {
@@ -94,22 +94,22 @@ import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 import * as User from "./User";
 
 const Api = {
-  User
+  User,
 };
 
 export type Api = typeof Api;
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.Connectionless,
+  dataType: Subprotocol.Datatype<Json.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<Json.t>(),
-  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
+  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex,
 });
 
 const session = Session.server({ protocol, provide: Api });
 ```
 
-For now don't worry about the different modes and just focus on the data format. In this case we are telling Transporter that our API only uses JSON data types. With strict type checking enabled we get a type error.
+For now don't worry about the different modes and just focus on the data type. In this case we are telling Transporter that our API only uses JSON data types. With strict type checking enabled we get a type error.
 
 ```
 Type 'undefined' is not assignable to type 'Json'.
@@ -121,8 +121,8 @@ Can you spot the problem? If you can't then don't worry because the compiler spo
 - import * as Json from "@daniel-nagy/transporter/Json";
 + import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
 
--   protocol: Subprotocol.Protocol<Json.t>(),
-+   protocol: Subprotocol.Protocol<SuperJson.t>(),
+-   dataType: Subprotocol.DataType<Json.t>(),
++   dataType: Subprotocol.DataType<SuperJson.t>(),
 ```
 
 With that change the error will go away.
@@ -140,14 +140,14 @@ import type { Api } from "./Server";
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.Connectionless,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
-  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
+  transmissionMode: Subprotocol.TransmissionMode.HalfDuplex,
 });
 
 const session = Session.client({
   protocol,
-  resource: Session.Resource<Api>()
+  resource: Session.Resource<Api>(),
 });
 
 const client = session.createProxy();
@@ -174,11 +174,11 @@ Bun.serve({
   async fetch(req) {
     using session = Session.server({ protocol, provide: Api });
     const reply = Observable.firstValueFrom(session.output);
-    const message = SuperJson.fromJson(await req.json())
+    const message = SuperJson.fromJson(await req.json());
     session.input.next(message as Message.t<SuperJson.t>);
     return Response.json(SuperJson.toJson(await reply));
   },
-  port: 3000
+  port: 3000,
 });
 ```
 
@@ -195,27 +195,27 @@ const session = Session.client({
   protocol,
   resource: Session.Resource<Api>(),
 });
- 
+
 const toRequest = (message: string) =>
   new Request("http://localhost:3000", {
     body: message,
     headers: {
-      "Content-Type": "application/json"
+      "Content-Type": "application/json",
     },
     method: "POST",
   });
- 
+
 session.output
   .pipe(
     Observable.map(SuperJson.toJson),
     Observable.map(JSON.stringify),
     Observable.map(toRequest),
     Observable.flatMap(fetch),
-    Observable.flatMap(response => response.json()),
+    Observable.flatMap((response) => response.json()),
     Observable.map(SuperJson.fromJson)
   )
   .subscribe(session.input);
-  
+
 const client = session.createProxy();
 ```
 
@@ -232,9 +232,9 @@ It is important to make sure your subprotocol and your transport layer are compa
 ```ts
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
-  transmissionMode: Subprotocol.TransmissionMode.Duplex
+  transmissionMode: Subprotocol.TransmissionMode.Duplex,
 });
 ```
 
@@ -271,4 +271,3 @@ This example uses the `BrowserServer` API to communicate with a service worker. 
 This example renders a webview with a button to scan a barcode. When the button is tapped it will use the `BarCodeScanner` component from Expo to access the camera to scan a barcode. Because this example uses the camera you will need to run it on a real device. I just use the Expo Go app on my phone.
 
 Transporter does not currently offer any React Native specific APIs. However, I may add React Native specific APIs similar to the browser APIs. It's just that React Native can be..._time consuming_.
-

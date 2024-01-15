@@ -53,20 +53,20 @@ export const rootSupervisor = Supervisor.init<Session>("RootSupervisor");
  * automatically terminated.
  */
 export abstract class Session<
-  Protocol = unknown,
+  DataType = unknown,
   Value = unknown
 > extends Supervisor.t<Agent> {
-  #input = Subject.init<Message.t<Protocol>>();
-  #output = Subject.init<Message.t<Protocol>>();
+  #input = Subject.init<Message.t<DataType>>();
+  #output = Subject.init<Message.t<DataType>>();
 
   public readonly input = this.#input as Required<
-    Observable.Observer<Message.t<Protocol>>
+    Observable.Observer<Message.t<DataType>>
   >;
 
   public readonly output = this.#output.asObservable();
 
   constructor(
-    public readonly protocol: Subprotocol<Protocol, Value>,
+    public readonly protocol: Subprotocol<DataType, Value>,
     public readonly injector?: Injector.t
   ) {
     super();
@@ -211,12 +211,12 @@ export abstract class Session<
  * Represents a client session. A proxy can be created from a client session for
  * calling remote functions.
  */
-export class ClientSession<Protocol, Value> extends Session<Protocol, Value> {
+export class ClientSession<DataType, Value> extends Session<DataType, Value> {
   #clientAgent: ClientAgent.t;
 
   constructor(
     public readonly injector: Injector.t | undefined,
-    public readonly protocol: Subprotocol<Protocol, Value>
+    public readonly protocol: Subprotocol<DataType, Value>
   ) {
     super(protocol, injector);
     this.#clientAgent = this.createClient(ROOT_AGENT_ADDRESS);
@@ -233,10 +233,10 @@ export class ClientSession<Protocol, Value> extends Session<Protocol, Value> {
 /**
  * Represents a server session.
  */
-export class ServerSession<Protocol, Value> extends Session<Protocol, Value> {
+export class ServerSession<DataType, Value> extends Session<DataType, Value> {
   constructor(
     public readonly injector: Injector.t | undefined,
-    public readonly protocol: Subprotocol<Protocol, Value>,
+    public readonly protocol: Subprotocol<DataType, Value>,
     public readonly value: Value
   ) {
     super(protocol, injector);
@@ -261,30 +261,30 @@ export const Resource = <Value>(): Resource<Value> => ({
  * The transporter protocol is type agnostic. Subprotocols are required for
  * type safety.
  */
-type Subprotocol<Protocol, Value> = Subprotocol.t<
-  Protocol,
+type Subprotocol<DataType, Value> = Subprotocol.t<
+  DataType,
   JsFunction.Input<ExtractFunctions<Value>>,
   JsFunction.Output<ExtractFunctions<Value>>
 >;
 
-interface Options<Protocol, Value> {
+interface Options<DataType, Value> {
   injector?: Injector.t;
-  protocol: Subprotocol<Protocol, Value>;
+  protocol: Subprotocol<DataType, Value>;
 }
 
-export interface ClientOptions<Protocol, Value>
-  extends Options<Protocol, Value> {
+export interface ClientOptions<DataType, Value>
+  extends Options<DataType, Value> {
   resource: Resource<Value>;
 }
 
 /**
  * Creates a new `ClientSession`.
  */
-export function client<const Protocol, Value>({
+export function client<const DataType, Value>({
   injector,
   protocol,
   resource: _
-}: ClientOptions<Protocol, Value>): ClientSession<Protocol, Value> {
+}: ClientOptions<DataType, Value>): ClientSession<DataType, Value> {
   return new ClientSession(injector, protocol);
 }
 
@@ -296,11 +296,11 @@ export interface ServerOptions<Protocol, Value>
 /**
  * Creates a new `ServerSession`.
  */
-export function server<Protocol, Value>({
+export function server<DataType, Value>({
   injector,
   protocol,
   provide: value
-}: ServerOptions<Protocol, Value>): ServerSession<Protocol, Value> {
+}: ServerOptions<DataType, Value>): ServerSession<DataType, Value> {
   return new ServerSession(injector, protocol, value);
 }
 

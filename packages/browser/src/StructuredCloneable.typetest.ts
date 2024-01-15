@@ -6,8 +6,8 @@ import * as Subprotocol from "../../../node_modules/@daniel-nagy/transporter/src
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,
+  dataType: Subprotocol.DataType<StructuredCloneable.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<StructuredCloneable.t>(),
   transmissionMode: Subprotocol.TransmissionMode.Duplex
 });
 
