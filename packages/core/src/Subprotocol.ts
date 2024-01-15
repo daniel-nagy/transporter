@@ -56,16 +56,17 @@ export enum TransmissionMode {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-export interface Protocol<T> {}
+export interface DataType<T> {}
 
 /**
- * A container type for a subprotocol. This exists as a workaround to the
- * absence of partial type inference in TypeScript.
+ * Constrains the input and output types of a procedure to a specific data type.
+ * A container type is necessary due to the absence of partial type inference in
+ * TypeScript.
  */
-export const Protocol = <const T>(): Protocol<T> => ({});
+export const DataType = <const T>(): DataType<T> => ({});
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-interface Subprotocol<Protocol, in Input = unknown, in Output = unknown> {
+interface Subprotocol<Type, in Input = unknown, in Output = unknown> {
   connectionMode: ConnectionMode;
   operationMode: OperationMode;
   transmissionMode: TransmissionMode;
@@ -76,8 +77,8 @@ export type { Subprotocol as t };
 /**
  * The Transporter protocol is type agnostic. In order to provide type-safety a
  * subprotocol is required. The subprotocol restricts what types may be included
- * in function IO. For example, if the subprotocol is JSON then only JSON data
- * types may be input or output from remote functions.
+ * in function IO. For example, if the data type of a subprotocol is JSON then
+ * only JSON data types may be input or output from remote functions.
  *
  * In addition, Transporter can perform recursive RPC if certain subprotocol and
  * network conditions are met. Recursive RPC means functions or proxies may be
@@ -92,30 +93,30 @@ export type { Subprotocol as t };
  * application of Transporter in the browser especially interesting.
  */
 const Subprotocol = <
-  const SubProtocol,
+  const Type,
   const Connection extends ConnectionMode,
   const Operation extends OperationMode,
   const Transmission extends TransmissionMode
 >({
   connectionMode,
+  dataType: _dataType,
   operationMode,
-  protocol: _protocol,
   transmissionMode
 }: {
   connectionMode: Connection;
+  dataType: DataType<Type>;
   operationMode: Operation;
-  protocol: Protocol<SubProtocol>;
   transmissionMode: Transmission;
 }): Subprotocol<
-  SubProtocol,
-  Io<SubProtocol, Connection, Operation, Transmission>,
+  Type,
+  Io<Type, Connection, Operation, Transmission>,
   "yes" extends Bidirectional<Operation, Transmission>
-    ? Promise<Io<SubProtocol, Connection, Operation, Transmission>>
+    ? Promise<Io<Type, Connection, Operation, Transmission>>
     : void
 > => ({ connectionMode, operationMode, transmissionMode });
 
 /**
- * Creates a new `SubProtocol`.
+ * Creates a new `Subprotocol`.
  */
 export const init = Subprotocol;
 

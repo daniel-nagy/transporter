@@ -479,7 +479,7 @@ const getUser = Injector.provide(
 
 <sup>_Module_</sup>
 
-A `Json` type may be used as a subprotocol. If both ends of your communication channel are JavaScript runtimes then you may use the [SuperJson](#Superjson) module instead for a much larger set of types.
+A `Json` type may be used as a data type for a subprotocol. If both ends of your communication channel are JavaScript runtimes then you may use the [SuperJson](#Superjson) module instead for a much larger set of types.
 
 ###### Types
 
@@ -1642,9 +1642,9 @@ Transporter protocol.
 <sup>_Type_</sup>
 
 ```ts
-interface ClientOptions<Protocol, Value> {
+interface ClientOptions<DataType, Value> {
   injector?: Injector.t;
-  protocol: Subprotocol<Protocol, Value>;
+  protocol: Subprotocol<DataType, Value>;
   resource: Resource<Value>;
 }
 ```
@@ -1656,7 +1656,7 @@ Options for creating a `ClientSession`.
 <sup>_Type_</sup>
 
 ```ts
-class ClientSession<Protocol, Value> extends Session<Protocol, Value> {
+class ClientSession<DataType, Value> extends Session<DataType, Value> {
   createProxy(): Proxy.t<Value>;
 }
 ```
@@ -1678,9 +1678,9 @@ A `Resource` is a value that is provided by a server.
 <sup>_Type_</sup>
 
 ```ts
-interface ServerOptions<Protocol, Value> {
+interface ServerOptions<DataType, Value> {
   injector?: Injector.t;
-  protocol: Subprotocol<Protocol, Value>;
+  protocol: Subprotocol<DataType, Value>;
   provide: Value;
 }
 ```
@@ -1692,7 +1692,7 @@ Options for creating a `ServerSession`.
 <sup>_Type_</sup>
 
 ```ts
-class ServerSession<Protocol, Value> extends Session<Protocol, Value> {}
+class ServerSession<DataType, Value> extends Session<DataType, Value> {}
 ```
 
 A `ServerSession` is created on the server to provide a resource.
@@ -1702,11 +1702,11 @@ A `ServerSession` is created on the server to provide a resource.
 <sup>_Type_</sup>
 
 ```ts
-abstract class Session<Protocol, Value> extends Supervisor.t<Agent> {
+abstract class Session<DataType, Value> extends Supervisor.t<Agent> {
   readonly injector?: Injector.t;
-  readonly input: Observable.Observer<Message.t<Protocol>>;
-  readonly output: Observable.t<Message.t<Protocol>>;
-  readonly protocol: Subprotocol<Protocol, Value>;
+  readonly input: Observable.Observer<Message.t<DataType>>;
+  readonly output: Observable.t<Message.t<DataType>>;
+  readonly protocol: Subprotocol<DataType, Value>;
 }
 ```
 
@@ -1748,9 +1748,9 @@ const resource = Session.Resource<Api>();
 <sup>_Constructor_</sup>
 
 ```ts
-function client<Protocol, Value>(
-  options: ClientOptions<Protocol, Value>
-): ClientSession<Protocol, Value>;
+function client<DataType, Value>(
+  options: ClientOptions<DataType, Value>
+): ClientSession<DataType, Value>;
 ```
 
 Creates a new `ClientSession`.
@@ -1766,8 +1766,8 @@ import type { Api } from "...";
 
 const httpProtocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionLess,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
   transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
 });
 
@@ -1784,9 +1784,9 @@ const client = session.createProxy();
 <sup>_Constructor_</sup>
 
 ```ts
-function server<Protocol, Value>(
-  options: ServerOptions<Protocol, Value>
-): ServerSession<Protocol, Value>;
+function server<DataType, Value>(
+  options: ServerOptions<DataType, Value>
+): ServerSession<DataType, Value>;
 ```
 
 Creates a new `ServerSession`.
@@ -1804,8 +1804,8 @@ module User {
 
 const httpProtocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionLess,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
   transmissionMode: Subprotocol.TransmissionMode.HalfDuplex
 });
 
@@ -1934,7 +1934,7 @@ Subscribes to state changes and values emitted by the subject.
 
 <sup>_Module_</sup>
 
-The Transporter protocol is type agnostic. In order to provide type-safety a subprotocol is required. The subprotocol restricts what types may be included in function IO. For example, if the subprotocol is JSON then only JSON data types may be input or output from remote functions.
+The Transporter protocol is type agnostic. In order to provide type-safety a subprotocol is required. The subprotocol restricts what types may be included in function IO. For example, if the data type of a subprotocol is JSON then only JSON data types may be input or output from remote functions.
 
 In addition, Transporter can perform recursive RPC if certain subprotocol and network conditions are met. Recursive RPC means functions or proxies may be included in function IO. This is an interesting concept because it allows state between processes to be held on the call stack. For example, recursive RPC allows Observables to be used for pub-sub.
 
@@ -1943,14 +1943,14 @@ In order to use recursive RPC your subprotocol must be connection-oriented and b
 ###### Types
 
 - [ConnectionMode](#ConnectionMode)
+- [DataType](#Subprotocol_DataType)
 - [OperationMode](#OperationMode)
-- [Protocol](#Subprotocol_Protocol)
 - [Subprotocol](#Subprotocol_Subprotocol)
 - [TransmissionMode](#TransmissionMode)
 
 ###### Constructors
 
-- [Protocol](#Subprotocol_Protocol_2)
+- [DataType](#Subprotocol_DataType_2)
 - [init](#Subprotocol_Init)
 
 ###### Functions
@@ -1978,6 +1978,16 @@ enum ConnectionMode {
 
 Used to define the type of connection between the client and the server.
 
+<h4 id="Subprotocol_DataType">DataType</h4>
+
+<sup>_Type_</sup>
+
+```ts
+interface DataType<T> {}
+```
+
+Constrains the input and output types of a procedure to a specific data type.
+
 #### OperationMode
 
 <sup>_Type_</sup>
@@ -2004,22 +2014,12 @@ enum OperationMode {
 
 Used to define how data is distributed to nodes in a network.
 
-<h4 id="Subprotocol_Protocol">Protocol</h4>
-
-<sup>_Type_</sup>
-
-```ts
-interface Protocol<T> {}
-```
-
-A container type for a subprotocol. This is necessary since TypeScript lacks partial inference of type parameters.
-
 <h4 id="Subprotocol_Subprotocol">Subprotocol</h4>
 
 <sup>_Type_</sup>
 
 ```ts
-interface Subprotocol<Protocol, Input, Output> {}
+interface Subprotocol<DataType, Input, Output> {}
 ```
 
 Used to restrict function input and output types as well as determine if recursive RPC can be enabled or not.
@@ -2047,23 +2047,23 @@ enum TransmissionMode {
 
 Used to define how data is transmitted over a network.
 
-<h4 id="Subprotocol_Protocol_2">Protocol</h4>
+<h4 id="Subprotocol_DataType_2">DataType</h4>
 
 <sup>_Constructor_</sup>
 
 ```ts
-function Protocol<const T>(): Protocol<T>;
+function DataType<const T>(): DataType<T>;
 ```
 
-Creates a new `Protocol`.
+Creates a new `DataType`.
 
 ##### Example
 
 ```ts
-import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 import * as Json from "@daniel-nagy/transporter/Json";
+import * as Subprotocol from "@daniel-nagy/transporter/Subprotocol";
 
-const jsonProtocol = Subprotocol.Protocol<Json.t>();
+const jsonDataType = Subprotocol.DataType<Json.t>();
 ```
 
 <h4 id="Subprotocol_Init">Init</h4>
@@ -2073,8 +2073,8 @@ const jsonProtocol = Subprotocol.Protocol<Json.t>();
 ```ts
 function init(options: {
   connectionMode: ConnectionMode;
+  dataType: DataType;
   operationMode: OperationMode;
-  protocol: Protocol;
   transmissionMode: TransmissionMode;
 }): Subprotocol;
 ```
@@ -2089,8 +2089,8 @@ import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
 
 const subprotocol = Subprotocol.init({
   connectionMode: Session.ConnectionMode.ConnectionLess,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Session.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
   transmissionMode: Session.TransmissionMode.HalfDuplex
 });
 ```
@@ -2113,8 +2113,8 @@ import * as SuperJson from "@daniel-nagy/transporter/SuperJson";
 
 const subprotocol = Subprotocol.init({
   connectionMode: Session.ConnectionMode.ConnectionLess,
+  dataType: Subprotocol.DataType<SuperJson.t>(),
   operationMode: Session.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<SuperJson.t>(),
   transmissionMode: Session.TransmissionMode.HalfDuplex
 });
 
@@ -2125,7 +2125,7 @@ Subprotocol.isBidirectional(subprotocol); // true
 
 <sup>_Module_</sup>
 
-The SuperJson module extends the JSON protocol to include many built-in JavaScript types, including `Date`, `RegExp`, `Map`, ect.
+The SuperJson module extends JSON to include many built-in JavaScript types, including `Date`, `RegExp`, `Map`, ect.
 
 ###### Types
 

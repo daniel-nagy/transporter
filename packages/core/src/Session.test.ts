@@ -369,8 +369,8 @@ test("proxies are referentially stable", () => {
 test("unidirectional protocols do not return a value", async () => {
   const protocol = Subprotocol.init({
     connectionMode: Subprotocol.ConnectionMode.Connectionless,
+    dataType: Subprotocol.DataType<Json.t>(),
     operationMode: Subprotocol.OperationMode.Broadcast,
-    protocol: Subprotocol.Protocol<Json.t>(),
     transmissionMode: Subprotocol.TransmissionMode.Simplex
   });
 
@@ -397,8 +397,8 @@ test("unidirectional protocols do not return a value", async () => {
 
 const jsonProtocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.ConnectionOriented,
+  dataType: Subprotocol.DataType<Json.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
-  protocol: Subprotocol.Protocol<Json.t>(),
   transmissionMode: Subprotocol.TransmissionMode.Duplex
 });
 

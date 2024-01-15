@@ -11,8 +11,8 @@ type Observer<T> = Required<Observable.Observer<T>>;
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.Connectionless,
+  dataType: Subprotocol.DataType<StructuredCloneable.t>(),
   operationMode: Subprotocol.OperationMode.Broadcast,
-  protocol: Subprotocol.Protocol<StructuredCloneable.t>(),
   transmissionMode: Subprotocol.TransmissionMode.Simplex
 });
 
