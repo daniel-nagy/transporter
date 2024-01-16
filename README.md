@@ -52,7 +52,7 @@ Transporter may also be used in React Native apps to communicate with webviews. 
 To get started using Transporter install the package from the npm registry using your preferred package manager.
 
 ```
-bun add @daniel-nagy/transporter
+npm add @daniel-nagy/transporter
 ```
 
 As of beta 3 Transporter is nearing API stability but there may still be some breaking changes to the API. For API docs see the README for each package.
