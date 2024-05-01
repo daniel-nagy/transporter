@@ -260,7 +260,7 @@ This example uses React but Transporter is framework agnostics and can work with
 
 #### Using Transporter to Communicate with a Service Worker
 
-[codesandbox.io](https://codesandbox.io/p/devbox/transporter-service-worker-example-d43prv)
+[codesandbox.io](https://codesandbox.io/p/devbox/transporter-service-worker-example-mvmmqc)
 
 This example uses the `BrowserServer` API to communicate with a service worker. If you use Brave you will need to turn off its shield feature to allow service workers in 3rd party iframes, since Codesandbox will run the preview in a crossorigin iframe. You may need to turn off similar security features in other browsers as well, or open the preview in a top level browsing context.
 
