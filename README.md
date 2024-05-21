@@ -101,7 +101,7 @@ export type Api = typeof Api;
 
 const protocol = Subprotocol.init({
   connectionMode: Subprotocol.ConnectionMode.Connectionless,
-  dataType: Subprotocol.Datatype<Json.t>(),
+  dataType: Subprotocol.DataType<Json.t>(),
   operationMode: Subprotocol.OperationMode.Unicast,
   transmissionMode: Subprotocol.TransmissionMode.HalfDuplex,
 });
