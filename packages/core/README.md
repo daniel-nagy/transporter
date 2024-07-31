@@ -784,9 +784,9 @@ The Metadata module allows information to be extracted from a proxy.
 ```ts
 type Metadata = {
   /**
-   * The address of the server that provides the value.
+   * The id of the client agent managing this proxy.
    */
-  address: string;
+  clientAgentId: string;
   /**
    * The path to the value in the original object.
    */

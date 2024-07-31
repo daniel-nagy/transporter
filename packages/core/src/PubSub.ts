@@ -45,7 +45,6 @@ export function from<T>(observable: Observable.ObservableLike<T>): PubSub<T> {
         Fiber.get(metadata.clientAgentId)?.stateChange.subscribe((state) => {
           switch (state) {
             case Fiber.State.Terminated:
-              console.log("terminated");
               subscription.unsubscribe();
           }
         });
