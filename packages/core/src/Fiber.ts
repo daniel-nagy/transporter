@@ -3,6 +3,11 @@ import * as BehaviorSubject from "./BehaviorSubject.js";
 export { Fiber as t };
 
 /**
+ * Keeps track of all active fibers.
+ */
+const table = new Map<string, Fiber>();
+
+/**
  * A fiber's state.
  */
 export enum State {
@@ -31,7 +36,9 @@ export class Fiber {
      * A unique identifier for this fiber.
      */
     public readonly id: string = crypto.randomUUID()
-  ) {}
+  ) {
+    table.set(id, this);
+  }
 
   /**
    * Terminates the fiber. The fiber's state will transition to `Terminated` and
@@ -40,12 +47,20 @@ export class Fiber {
   terminate() {
     this.#state.next(State.Terminated);
     this.#state.complete();
+    table.delete(this.id);
   }
 
   [Symbol.dispose]() {
     this.terminate();
   }
 }
+
+/**
+ * Get a reference to a Fiber from its id.
+ */
+export const get = <T extends Fiber>(id: string): T | null => {
+  return (table.get(id) as T) ?? null;
+};
 
 /**
  * Creates a new `Fiber`.

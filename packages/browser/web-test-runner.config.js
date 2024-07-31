@@ -2,8 +2,8 @@ import { esbuildPlugin } from "@web/dev-server-esbuild";
 import { playwrightLauncher } from "@web/test-runner-playwright";
 import ts from "typescript";
 
-import tsConfigBase from "./tsconfig-base.json" assert { type: "json" };
-import tsConfigTest from "./tsconfig-test.json" assert { type: "json" };
+import tsConfigBase from "./tsconfig-base.json" with { type: "json" };
+import tsConfigTest from "./tsconfig-test.json" with { type: "json" };
 
 /**
  * @type import("@web/test-runner").TestRunnerConfig

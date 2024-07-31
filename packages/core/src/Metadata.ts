@@ -9,9 +9,9 @@ export const symbol = Symbol.for("metadata");
  */
 export type Metadata = {
   /**
-   * The address of the server that provides the value.
+   * The id of the client agent managing this proxy.
    */
-  address: string;
+  clientAgentId: string;
   /**
    * The path to the value in the original object from the dereferenced value.
    */
