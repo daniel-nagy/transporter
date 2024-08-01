@@ -1,3 +1,5 @@
+import * as Fiber from "./Fiber.js";
+import * as Metadata from "./Metadata.js";
 import * as Observable from "./Observable/index.js";
 
 /**
@@ -36,10 +38,22 @@ export function from<T>(observable: Observable.ObservableLike<T>): PubSub<T> {
     subscribe: async (
       observer: AsyncObserver<T> | ((value: T) => Promise<void>)
     ) => {
+      const metadata = Metadata.get(observer);
+      const agent = metadata && Fiber.get(metadata.clientAgentId);
       const subscription = observable.subscribe(observer);
 
+      const innerSubscription = agent?.stateChange.subscribe((state) => {
+        switch (state) {
+          case Fiber.State.Terminated:
+            subscription.unsubscribe();
+        }
+      });
+
       return {
-        unsubscribe: async () => subscription.unsubscribe()
+        unsubscribe: async () => {
+          innerSubscription?.unsubscribe();
+          subscription.unsubscribe();
+        }
       };
     }
   };

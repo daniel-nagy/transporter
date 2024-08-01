@@ -1,4 +1,5 @@
 import * as JsObject from "./JsObject.js";
+import * as UUID from "./UUID.js";
 
 /**
  * Flattens an intersection type into a single type.
@@ -89,7 +90,7 @@ export type CallFunction<Args> = FlattenIntersection<
 export const CallFunction = <Args>({
   address,
   args,
-  id = crypto.randomUUID(),
+  id = UUID.v4(),
   noReply = false,
   path
 }: {
@@ -122,7 +123,7 @@ export type Error<Error> = FlattenIntersection<
 export const Error = <T>({
   address,
   error,
-  id = crypto.randomUUID()
+  id = UUID.v4()
 }: {
   address: string;
   error: T;
@@ -147,7 +148,7 @@ export type GarbageCollect = FlattenIntersection<
  */
 export const GarbageCollect = ({
   address,
-  id = crypto.randomUUID()
+  id = UUID.v4()
 }: {
   address: string;
   id?: string;
@@ -171,7 +172,7 @@ export type SetValue<Value> = FlattenIntersection<
  */
 export const SetValue = <T>({
   address,
-  id = crypto.randomUUID(),
+  id = UUID.v4(),
   value
 }: {
   address: string;

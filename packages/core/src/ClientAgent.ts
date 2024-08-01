@@ -131,7 +131,7 @@ export class ClientAgent extends Fiber.t {
     const children: Record<string, unknown> = {};
 
     const meta: Metadata.t = {
-      address: this.serverAddress,
+      clientAgentId: this.id,
       objectPath: path
     };
 

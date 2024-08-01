@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { spy, spyOn } from "tinyspy";
 
+import * as BehaviorSubject from "./BehaviorSubject.js";
 import * as Cache from "./Cache.js";
 import * as Fiber from "./Fiber.js";
 import * as Injector from "./Injector.js";
@@ -9,8 +10,11 @@ import * as Message from "./Message.js";
 import * as Metadata from "./Metadata.js";
 import * as Observable from "./Observable/index.js";
 import * as Proxy from "./Proxy.js";
+import * as PubSub from "./PubSub.js";
 import * as Session from "./Session.js";
 import * as Subprotocol from "./Subprotocol.js";
+
+const UUID = expect.stringMatching(/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}/) as string;
 
 afterEach(() => {
   Session.rootSupervisor.tasks.forEach((task) => task.terminate());
@@ -256,12 +260,12 @@ describe("proxied objects", () => {
     const { proxy, dispose } = expose({ bar: async () => {} });
 
     expect(Metadata.get(proxy)).toEqual({
-      address: "",
+      clientAgentId: UUID,
       objectPath: []
     });
 
     expect(Metadata.get(proxy.bar)).toEqual({
-      address: "",
+      clientAgentId: UUID,
       objectPath: ["bar"]
     });
 
@@ -284,13 +288,32 @@ describe("proxied objects", () => {
     const childProxy = await proxy();
 
     expect(Metadata.get(childProxy)).toEqual({
-      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-      // @ts-ignore
-      address: expect.stringMatching(/\w{8}-\w{4}-\w{4}-\w{4}-\w{12}/),
+      clientAgentId: UUID,
       objectPath: []
     });
 
     expect(await childProxy.foo()).toEqual("👍");
+    dispose();
+  });
+});
+
+describe("pub/sub", () => {
+  test("A pub/sub is unsubscribed when the session is terminated", async () => {
+    const counter = BehaviorSubject.of(0);
+    const unsubscribe = spy();
+
+    spyOn(counter, "subscribe", () => ({ unsubscribe }));
+
+    const { dispose, proxy, server } = expose({
+      Chat: { counter: PubSub.from(counter) }
+    });
+
+    proxy.Chat.counter.subscribe(async () => {});
+
+    await scheduleTask();
+    server.terminate();
+
+    expect(unsubscribe.callCount).toBe(1);
     dispose();
   });
 });
@@ -300,7 +323,7 @@ describe("reflection", () => {
     const { proxy, dispose } = expose(async () => {});
 
     expect(Metadata.get(proxy)).toEqual({
-      address: "",
+      clientAgentId: UUID,
       objectPath: []
     });
 
@@ -311,7 +334,7 @@ describe("reflection", () => {
     const { proxy, dispose } = expose({ a: async () => {} });
 
     expect(Metadata.get(proxy.a)).toEqual({
-      address: "",
+      clientAgentId: UUID,
       objectPath: ["a"]
     });
 
