@@ -1,4 +1,5 @@
 import * as BehaviorSubject from "./BehaviorSubject.js";
+import * as UUID from "./UUID.js";
 
 export { Fiber as t };
 
@@ -35,7 +36,7 @@ export class Fiber {
     /**
      * A unique identifier for this fiber.
      */
-    public readonly id: string = crypto.randomUUID()
+    public readonly id: string = UUID.v4()
   ) {
     table.set(id, this);
   }

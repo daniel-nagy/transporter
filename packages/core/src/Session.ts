@@ -11,6 +11,7 @@ import * as ServerAgent from "./ServerAgent.js";
 import * as Subject from "./Subject.js";
 import * as Subprotocol from "./Subprotocol.js";
 import * as Supervisor from "./Supervisor.js";
+import * as UUID from "./UUID.js";
 
 export { Session as t };
 
@@ -113,7 +114,7 @@ export abstract class Session<
   protected createServer(
     this: Session,
     provide: unknown,
-    address: string = crypto.randomUUID()
+    address: string = UUID.v4()
   ): ServerAgent.t {
     const serverAgent = ServerAgent.init({
       address,

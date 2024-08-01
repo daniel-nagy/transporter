@@ -39,19 +39,21 @@ export function from<T>(observable: Observable.ObservableLike<T>): PubSub<T> {
       observer: AsyncObserver<T> | ((value: T) => Promise<void>)
     ) => {
       const metadata = Metadata.get(observer);
+      const agent = metadata && Fiber.get(metadata.clientAgentId);
       const subscription = observable.subscribe(observer);
 
-      if (metadata) {
-        Fiber.get(metadata.clientAgentId)?.stateChange.subscribe((state) => {
-          switch (state) {
-            case Fiber.State.Terminated:
-              subscription.unsubscribe();
-          }
-        });
-      }
+      const innerSubscription = agent?.stateChange.subscribe((state) => {
+        switch (state) {
+          case Fiber.State.Terminated:
+            subscription.unsubscribe();
+        }
+      });
 
       return {
-        unsubscribe: async () => subscription.unsubscribe()
+        unsubscribe: async () => {
+          innerSubscription?.unsubscribe();
+          subscription.unsubscribe();
+        }
       };
     }
   };
