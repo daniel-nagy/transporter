@@ -15,7 +15,7 @@ For an introduction to Transporter check out my [blog post](https://danielnagy.m
 
 ### Features
 
-- 👌 Typesaftey without code generation.[^1]
+- 👌 Typesafety without code generation.[^1]
 - 😍 Support for generic functions.
 - 🤩 The core API works in any JavaScript runtime.[^2][^3]
 - 😎 Easily integrates into your existing codebase.
